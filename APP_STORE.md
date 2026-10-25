@@ -9,6 +9,8 @@ You do need an Apple Developer account, and about an hour for the one-time setup
 |---|---|
 | App icon (1024×1024, no transparency) | `NextTime/NextTime/Assets.xcassets/AppIcon.appiconset` |
 | Location permission explanation | build setting `NSLocationWhenInUseUsageDescription` |
+| Camera permission explanation | build setting `NSCameraUsageDescription` |
+| Share from Google Maps | `NextTime/ShareExtension` (a Share extension) and the App Group in `NextTime/Config` |
 | Privacy manifest (no tracking, no data collected) | `NextTime/NextTime/PrivacyInfo.xcprivacy` |
 | Export compliance ("uses no non-exempt encryption") | build setting `ITSAppUsesNonExemptEncryption = NO` |
 | Bundle ID | `com.bmjaanes.nexttime` |
@@ -24,11 +26,17 @@ You do need an Apple Developer account, and about an hour for the one-time setup
 https://developer.apple.com/programs/enroll/ costs $99 per year. Enroll as an individual unless you have a company.
 Approval usually takes a day or two.
 
-### 2. Register the app's ID
-1. Go to https://developer.apple.com/account/resources/identifiers/list and tap **+**.
-2. Choose **App IDs**, then **App**.
-3. Enter the description `Next Time` and choose **Explicit** with the Bundle ID `com.bmjaanes.nexttime`.
-4. No extra capabilities are needed. Tap **Continue**, then **Register**.
+### 2. Register the App Group and the two app IDs
+The app and its Google Maps share extension each need an ID, and they share saved places through an App Group.
+All of this is at https://developer.apple.com/account/resources/identifiers/list.
+
+1. Tap **+**, choose **App Groups**, and enter the description `Next Time` and the identifier `group.com.bmjaanes.nexttime`. Tap **Register**.
+2. Tap **+**, choose **App IDs**, then **App**. Enter the description `Next Time` and choose **Explicit** with the Bundle ID `com.bmjaanes.nexttime`.
+   Under Capabilities, tick **App Groups**. Tap **Continue**, then **Register**.
+3. Repeat step 2 for the extension: description `Next Time Share`, Bundle ID `com.bmjaanes.nexttime.share`, with **App Groups** ticked.
+4. Open each of the two app IDs, tap **Configure** next to App Groups, tick `group.com.bmjaanes.nexttime`, and save.
+
+(The upload workflow often registers these automatically, but doing it by hand avoids a failed first run.)
 
 ### 3. Create the app in App Store Connect
 1. Go to https://appstoreconnect.apple.com/apps, then **+**, then **New App**.
@@ -95,20 +103,23 @@ In App Store Connect, open the app, then version **1.0**:
   > • Save the place you're at right now with one tap
   > • Hands full? Just say "Hey Siri, add a Next Time note"
   > • Search for any restaurant, shop or address
-  > • Paste a place straight from Google Maps
+  > • Share a place straight from Google Maps: tap Share, then Next Time
+  > • Rate places 1 to 5 stars and mark each dish 👍 or 👎
+  > • Snap the menu, your order, or the receipt
+  > • Sort by rating, or see your \"never again\" list at a glance
   > • Get reminded every time you return, not just once
   > • Works for anything: restaurants, hardware stores, hotels, trailheads, parking garages
   >
   > Private by design: your notes stay on your iPhone. No account, no ads, no tracking. iOS handles the arrival alerts itself, so Next Time only needs location access while you're using it and has almost no effect on battery.
 
-- **Keywords**: `restaurant,notes,reminder,location,places,food,order,memory,siri,google maps,diary,dining`
+- **Keywords**: `restaurant,notes,reminder,rating,places,food,dishes,photos,siri,google maps,diary,dining`
 - **Support URL**: `https://bmjaanes.github.io/chatbot/support.html`
 - **Marketing URL**: leave blank
 - **Version / Copyright**: `1.0` / `2026` followed by your name or company
 - **Build**: choose the build you uploaded.
 - **App Review Information**: no sign-in required. In **Notes**, paste:
 
-  > Next Time shows a note when the user arrives at a saved place. To test: tap +, choose Near Me, pick any place, write a note and save. Allow location and notifications. The notification is delivered by iOS (UNLocationNotificationTrigger) when the device enters the area around the place, so it appears after leaving and returning, or by simulating a location change. Places can also be added via Search or by pasting a Google Maps share link. Siri: say "Add a Next Time note" (location access must be granted in the app first).
+  > Next Time shows a note when the user arrives at a saved place. To test: tap +, choose Near Me, pick any place, write a note and save. Allow location and notifications. The notification is delivered by iOS (UNLocationNotificationTrigger) when the device enters the area around the place, so it appears after leaving and returning, or by simulating a location change. Places can also be added via Search or by pasting a Google Maps share link. Siri: say "Add a Next Time note" (location access must be granted in the app first). Ratings, dishes and photos are on the place screen. To add from Google Maps: open a place in Google Maps, tap Share, choose Next Time.
 
 ### 5. Fill in the app-level pages (once)
 - **App Privacy**: Privacy Policy URL `https://bmjaanes.github.io/chatbot/privacy.html`. Under Data Collection, choose **No, we do not collect data from this app**.

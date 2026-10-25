@@ -14,9 +14,22 @@ Save *"Don't get the fish"* at a restaurant and the next time you walk in, your 
 
 From any saved reminder you can tap **Open in Google Maps** to jump back to the place.
 
+### Ratings, dishes and photos
+
+Each place has a 1–5 star rating, a list of dishes marked 👍 (get again) or 👎 (skip), and photos from the camera or
+photo library, such as menus, receipts or screenshots. The arrival notification shows the stars and the dishes. On the home
+screen you can sort by rating and filter to "Loved" (4–5 ★) or "Never Again" (1–2 ★) places. Photos are stored on the
+phone next to the reminders, downscaled to 2048 px.
+
+### Share from Google Maps
+
+In Google Maps, open a place, tap **Share**, then **Next Time**. The Share extension (`ShareExtension/`) reads the
+link Google Maps shares, finds the place, and lets you add a rating and note without opening the app. The app and the
+extension share code (`Shared/`) and data (an App Group, `group.com.bmjaanes.nexttime`).
+
 ### Siri
 
-Say **"Hey Siri, add a Next Time note"** (or "Remember this place in Next Time"). Siri asks what to remember,
+Say **"Hey Siri, add a Next Time note"** (or "Remember this place in Next Time"), or **"Rate this place 4 stars in Next Time"**. Siri asks what to remember,
 then the note is saved for the business you're at. If there's no business within 60 m, it's saved for the street
 address. If you already have a note within 40 m, the new one is added to it. This also works from the Shortcuts app
 and the Action button. Location access has to be allowed in the app once first, because Siri can't show that prompt.

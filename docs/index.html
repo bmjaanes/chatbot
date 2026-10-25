@@ -219,11 +219,67 @@ header p { margin: 6px 0 0; color: var(--muted); }
 .siri[open] summary::after { content: "–"; }
 .siri-body { padding: 0 16px 16px; display: grid; gap: 10px; font-size: 0.95rem; }
 .siri-body p { margin: 0; }
+.siri-body h3 { margin: 6px 0 0; font-size: 1rem; }
 .siri-body ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
 .siri-body code { font-size: 0.82rem; background: var(--bg); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }
 .siri-body .hint { color: var(--muted); font-size: 0.85rem; }
 .url-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
 .url-row code { flex: 1 1 220px; min-width: 0; padding: 8px 10px; }
+
+/* Ratings, dishes, photos */
+.stars { color: var(--marigold); letter-spacing: 1px; font-size: 1rem; line-height: 1; }
+.dishes { display: flex; flex-wrap: wrap; gap: 6px; }
+.dish { font-size: 0.82rem; padding: 3px 9px; border-radius: 999px; background: var(--bg); overflow-wrap: anywhere; }
+.dish.bad { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--danger) 60%, transparent); }
+.thumbs { display: flex; gap: 6px; flex-wrap: wrap; }
+.thumbs button {
+  width: 64px; height: 64px; padding: 0; border: 0; border-radius: 10px; overflow: hidden; background: var(--bg);
+  position: relative; flex: none;
+}
+.thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumbs .more { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, 0.5); color: #fff; font-weight: 700; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.controls select {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 0.85rem; font-weight: 700;
+}
+.chip-btn[aria-pressed="true"] { background: var(--teal); border-color: var(--teal); color: var(--surface); }
+
+.star-input { display: flex; gap: 4px; }
+.star-input button {
+  background: none; border: 0; font-size: 2rem; line-height: 1; padding: 4px 6px; color: var(--line); min-width: 44px; min-height: 44px;
+}
+.star-input button.on { color: var(--marigold); }
+.dish-rows { display: grid; gap: 8px; }
+.dish-row { display: flex; gap: 8px; align-items: center; }
+.dish-row input { flex: 1; min-width: 0; }
+.verdict {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; font-size: 1.2rem; min-width: 44px; min-height: 44px;
+}
+.icon-btn { background: none; border: 0; color: var(--muted); font-size: 1.3rem; min-width: 36px; min-height: 44px; }
+.photo-edit { display: flex; flex-wrap: wrap; gap: 8px; }
+.photo-edit .ph { position: relative; width: 76px; height: 76px; border-radius: 10px; overflow: hidden; background: var(--surface); }
+.photo-edit img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-edit .ph button {
+  position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%; border: 0;
+  background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 0.95rem; line-height: 1; padding: 0;
+}
+.file-btn { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.file-btn input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* Full-screen photo viewer */
+.viewer {
+  position: fixed; inset: 0; z-index: 50; background: #000; display: grid; grid-template-rows: auto 1fr auto;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.viewer header, .viewer footer {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; color: #fff;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 10px;
+}
+.viewer button { background: none; border: 0; color: #fff; font-weight: 700; padding: 8px 4px; min-height: 44px; }
+.viewer .stage { display: grid; place-items: center; min-height: 0; overflow: hidden; }
+.viewer img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
 @media (prefers-reduced-motion: reduce) {
   .banner { transition: none; }
@@ -243,6 +299,18 @@ header p { margin: 6px 0 0; color: var(--muted); }
     <input id="q" type="search" placeholder="Where are you? Type the place name" autocomplete="off">
   </label>
 
+  <div class="controls" id="controls" hidden>
+    <select id="sort" aria-label="Sort places">
+      <option value="closest">Closest first</option>
+      <option value="rating">Highest rated</option>
+      <option value="newest">Newest</option>
+      <option value="name">Name</option>
+    </select>
+    <button type="button" class="chip-btn" data-filter="all" aria-pressed="true">All</button>
+    <button type="button" class="chip-btn" data-filter="loved" aria-pressed="false">Loved ★4–5</button>
+    <button type="button" class="chip-btn" data-filter="never" aria-pressed="false">Never again ★1–2</button>
+  </div>
+
   <div class="loc" id="loc">
     <i class="dot"></i>
     <span id="loc-text">Near-me alerts are off.</span>
@@ -255,9 +323,10 @@ header p { margin: 6px 0 0; color: var(--muted); }
   <details class="siri" id="siri">
     <summary>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
-      Add notes with Siri
+      Siri and Google Maps shortcuts
     </summary>
     <div class="siri-body">
+      <h3>Add notes with Siri</h3>
       <p>Say <b>“Hey Siri, Next Time Note”</b>, tell Siri what to remember, and it's saved for the place you're at. Set it up once in the Shortcuts app:</p>
       <ol>
         <li>Open <b>Shortcuts</b>, tap <b>+</b>, and name the shortcut <b>Next Time Note</b>.</li>
@@ -266,7 +335,7 @@ header p { margin: 6px 0 0; color: var(--muted); }
         <li>Add <b>Get Current Location</b>.</li>
         <li>Add <b>Get Details of Locations</b> and set it to <i>Name</i>, then add another <b>URL Encode</b>.</li>
         <li>Add <b>Text</b> and paste this link:
-          <span class="url-row"><code id="siri-url">https://bmjaanes.github.io/chatbot/?note=NOTE&amp;name=NAME&amp;lat=LAT&amp;lng=LNG</code><button type="button" class="chip-btn" id="copy-url">Copy link</button></span>
+          <span class="url-row"><code id="siri-url">https://bmjaanes.github.io/chatbot/?note=NOTE&amp;name=NAME&amp;lat=LAT&amp;lng=LNG</code><button type="button" class="chip-btn" data-copy="siri-url">Copy link</button></span>
           Then swap each placeholder for a variable. Tap the variable button above the keyboard:
           <code>NOTE</code> → the first <i>URL Encoded Text</i>,
           <code>NAME</code> → the second <i>URL Encoded Text</i>,
@@ -274,6 +343,18 @@ header p { margin: 6px 0 0; color: var(--muted); }
           <code>LNG</code> → <i>Current Location</i>, then <i>Longitude</i>.</li>
         <li>Add <b>Open URLs</b>.</li>
       </ol>
+      <h3>Share from Google Maps</h3>
+      <p>Put <b>Save to Next Time</b> in Google Maps' Share menu:</p>
+      <ol>
+        <li>In <b>Shortcuts</b>, tap <b>+</b> and name it <b>Save to Next Time</b>.</li>
+        <li>Tap the <b>ⓘ</b> button (or the shortcut's name at the top), turn on <b>Show in Share Sheet</b>, and set it to receive <i>URLs</i> and <i>Text</i>.</li>
+        <li>Add <b>URL Encode</b>. It encodes the <i>Shortcut Input</i> automatically.</li>
+        <li>Add <b>Text</b> and paste this link:
+          <span class="url-row"><code id="share-url">https://bmjaanes.github.io/chatbot/?share=SHARED</code><button type="button" class="chip-btn" data-copy="share-url">Copy link</button></span>
+          Replace <code>SHARED</code> with the <i>URL Encoded Text</i> variable.</li>
+        <li>Add <b>Open URLs</b>.</li>
+      </ol>
+      <p>Then in Google Maps, open a place, tap <b>Share</b>, and pick <b>Save to Next Time</b>. You may need to tap <b>More</b> or <b>Edit Actions</b> the first time. The place opens here, ready for your note and rating.</p>
       <p class="hint">Notes from Siri open the web app at bmjaanes.github.io/chatbot in Safari and are saved there. The first time, Shortcuts asks to use your location. Choose <b>Always Allow</b> so Siri doesn't ask again. If Shortcuts can't name the place, the edit screen opens so you can type a name. If it names the street instead of the business, tap <b>Edit</b> to rename it.</p>
     </div>
   </details>
@@ -320,8 +401,37 @@ header p { margin: 6px 0 0; color: var(--muted); }
     </div>
 
     <div class="field">
+      <span class="label" id="rating-label">Your rating</span>
+      <div class="star-input" id="f-rating" role="radiogroup" aria-labelledby="rating-label"></div>
+    </div>
+
+    <div class="field">
       <label for="f-note">Next time I'm here…</label>
-      <textarea id="f-note" rows="3" required placeholder="Don't get the fish. The burger was great."></textarea>
+      <textarea id="f-note" rows="3" placeholder="Ask for the patio. Cash only."></textarea>
+    </div>
+
+    <div class="field">
+      <span class="label">What I had</span>
+      <div class="dish-rows" id="dish-rows"></div>
+      <div class="dish-row">
+        <input id="f-dish" placeholder="Add a dish, e.g. Fish tacos" enterkeyhint="done">
+        <button type="button" class="verdict" id="add-good" aria-label="Add as good">👍</button>
+        <button type="button" class="verdict" id="add-bad" aria-label="Add as skip">👎</button>
+      </div>
+      <span class="hint">Tap 👍 or 👎 on a dish to change your verdict.</span>
+    </div>
+
+    <div class="field">
+      <span class="label">Photos</span>
+      <div class="photo-edit" id="photo-edit"></div>
+      <div class="row">
+        <label class="ghost file-btn" for="f-photos">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          Add photos
+          <input id="f-photos" type="file" accept="image/*" multiple>
+        </label>
+      </div>
+      <span class="hint" id="photo-hint">Take a photo, or add menus, dishes, receipts or screenshots from your library.</span>
     </div>
 
     <div class="field">
@@ -339,6 +449,12 @@ header p { margin: 6px 0 0; color: var(--muted); }
       <button type="submit" class="primary" id="save-btn">Save place</button>
     </div>
   </form>
+</div>
+
+<div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="Photo">
+  <header><button type="button" id="viewer-close">Done</button><span id="viewer-count"></span><span></span></header>
+  <div class="stage"><img id="viewer-img" alt=""></div>
+  <footer><button type="button" id="viewer-prev">‹ Previous</button><button type="button" id="viewer-next">Next ›</button></footer>
 </div>
 
 <button class="banner" id="banner" type="button" aria-live="polite">
@@ -402,6 +518,88 @@ header p { margin: 6px 0 0; color: var(--muted); }
       }
     },
   };
+
+  // ---------- Photos ----------
+  // Each place keeps small thumbnails inline; full-size images live in their own records
+  // (IndexedDB in a browser, one document per photo in Claude) so places stay small.
+  const MAX_PHOTOS = 12;
+  const photoStore = {
+    idb: null,
+    open() {
+      if (!this.idb) {
+        this.idb = new Promise((resolve, reject) => {
+          const req = indexedDB.open("next-time", 1);
+          req.onupgradeneeded = () => req.result.createObjectStore("photos");
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+      return this.idb;
+    },
+    async tx(mode, fn) {
+      const db = await this.open();
+      return new Promise((resolve, reject) => {
+        const t = db.transaction("photos", mode);
+        const result = fn(t.objectStore("photos"));
+        t.oncomplete = () => resolve(result && result.result);
+        t.onerror = () => reject(t.error);
+      });
+    },
+    ref(placeId, id) { return store.col.doc(placeId).collection("photos").doc(id); },
+    async put(placeId, id, data) {
+      if (store.mode === "db" && store.col) return this.ref(placeId, id).set({ data });
+      return this.tx("readwrite", (s) => s.put(data, id));
+    },
+    async get(placeId, id) {
+      if (store.mode === "db" && store.col) {
+        const snap = await this.ref(placeId, id).get();
+        return snap.exists ? snap.data().data : null;
+      }
+      return this.tx("readonly", (s) => s.get(id));
+    },
+    async remove(placeId, ids) {
+      for (const id of ids) {
+        try {
+          if (store.mode === "db" && store.col) await this.ref(placeId, id).delete();
+          else await this.tx("readwrite", (s) => s.delete(id));
+        } catch {}
+      }
+    },
+  };
+
+  async function readImage(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      return {
+        thumb: jpeg(img, 240, 30000),
+        full: jpeg(img, 1600, 230000), // stays under the 256 KB document limit
+      };
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  function jpeg(img, maxSide, maxChars) {
+    let scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+    let quality = 0.82;
+    const canvas = document.createElement("canvas");
+    for (let i = 0; i < 12; i++) {
+      canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      const data = canvas.toDataURL("image/jpeg", quality);
+      if (data.length <= maxChars) return data;
+      if (quality > 0.55) quality -= 0.12; else scale *= 0.8;
+    }
+    return canvas.toDataURL("image/jpeg", 0.5);
+  }
+
+  const newId = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+  const starText = (r) => "★".repeat(r) + "☆".repeat(5 - r);
+  const dishSummary = (p) => (p.dishes || []).map((d) => (d.verdict === "bad" ? "👎 " : "👍 ") + d.name).join(" · ");
 
   // ---------- Google Maps share parsing (same rules as the iOS app) ----------
   function coordPair(text) {
@@ -539,10 +737,10 @@ header p { margin: 6px 0 0; color: var(--muted); }
 
   // ---------- Banner ----------
   let bannerTimer = null, bannerPlace = null;
-  function showBanner(place, demo, title) {
+  function showBanner(place, demo, title, body) {
     bannerPlace = place.id;
-    $("banner-title").textContent = title || "Back at " + place.name;
-    $("banner-body").textContent = place.note;
+    $("banner-title").textContent = (title || "Back at " + place.name) + (place.rating && !title ? "  " + starText(place.rating) : "");
+    $("banner-body").textContent = body || [place.note, dishSummary(place)].filter(Boolean).join(" · ");
     $("banner-demo").hidden = !demo;
     $("banner").classList.add("show");
     if (navigator.vibrate) { try { navigator.vibrate(120); } catch {} }
@@ -557,6 +755,15 @@ header p { margin: 6px 0 0; color: var(--muted); }
   });
 
   // ---------- Rendering ----------
+  const view = { sort: "closest", filter: "all" };
+  $("sort").onchange = () => { view.sort = $("sort").value; render(); };
+  document.querySelectorAll("[data-filter]").forEach((b) => {
+    b.onclick = () => {
+      view.filter = b.dataset.filter;
+      document.querySelectorAll("[data-filter]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      render();
+    };
+  });
   const hasCoord = (p) => typeof p.lat === "number" && typeof p.lng === "number";
   const PIN = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>';
 
@@ -581,8 +788,31 @@ header p { margin: 6px 0 0; color: var(--muted); }
     const pin = el("div", "pin"); pin.innerHTML = PIN;
     const body = el("div", "body");
     body.append(el("h2", null, p.name));
+    if (p.rating) {
+      const stars = el("div", "stars", starText(p.rating));
+      stars.setAttribute("aria-label", p.rating + " of 5 stars");
+      body.append(stars);
+    }
     if (p.address) body.append(el("div", "addr", p.address));
-    body.append(el("p", "note", p.note));
+    if (p.note) body.append(el("p", "note", p.note));
+    if (p.dishes && p.dishes.length) {
+      const dishes = el("div", "dishes");
+      p.dishes.forEach((d) => dishes.append(el("span", "dish" + (d.verdict === "bad" ? " bad" : ""), (d.verdict === "bad" ? "👎 " : "👍 ") + d.name)));
+      body.append(dishes);
+    }
+    if (p.photos && p.photos.length) {
+      const strip = el("div", "thumbs");
+      p.photos.slice(0, 4).forEach((ph, i) => {
+        const b = el("button"); b.type = "button";
+        b.setAttribute("aria-label", "Photo " + (i + 1) + " of " + p.photos.length);
+        const img = el("img"); img.src = ph.thumb; img.alt = "";
+        b.append(img);
+        if (i === 3 && p.photos.length > 4) b.append(el("span", "more", "+" + (p.photos.length - 4)));
+        b.onclick = () => openViewer(p, i);
+        strip.append(b);
+      });
+      body.append(strip);
+    }
 
     const meta = el("div", "meta");
     if (example) meta.append(el("span", "tag", "Example"));
@@ -605,7 +835,11 @@ header p { margin: 6px 0 0; color: var(--muted); }
       pause.onclick = () => store.put({ ...p, dist: undefined, enabled: p.enabled === false });
       const del = el("button", "danger", "Delete"); del.type = "button";
       del.onclick = () => {
-        if (del.dataset.armed) { store.remove(p.id); return; }
+        if (del.dataset.armed) {
+          photoStore.remove(p.id, (p.photos || []).map((ph) => ph.id));
+          store.remove(p.id);
+          return;
+        }
         del.dataset.armed = "1"; del.textContent = "Tap again to delete";
         setTimeout(() => { delete del.dataset.armed; del.textContent = "Delete"; }, 3000);
       };
@@ -625,28 +859,124 @@ header p { margin: 6px 0 0; color: var(--muted); }
       const box = el("section", "empty");
       box.append(el("h2", null, "Save a note for the next time you're somewhere"));
       box.append(el("p", null, "At a restaurant and the fish was a letdown? Save it here. When you come back, you'll be reminded."));
-      box.append(stub({ id: "example", name: "Joe's Fish Shack", address: "12 Main St, Portland", note: "Don't get the fish. Burger was great, ask for extra pickles." }, { example: true }));
+      box.append(stub({ id: "example", name: "Joe's Fish Shack", address: "12 Main St, Portland", rating: 2, note: "Ask for a booth by the window.",
+        dishes: [{ name: "Fish & chips", verdict: "bad" }, { name: "Smash burger", verdict: "good" }] }, { example: true }));
       const add = el("button", "primary", "Add your first place"); add.type = "button"; add.onclick = () => openSheet();
       box.append(add);
       list.append(box);
     } else {
       let items = store.places.map((p) => ({ ...p, dist: loc.pos && hasCoord(p) ? distance(loc.pos, p) : null }));
-      if (q) items = items.filter((p) => (p.name + " " + (p.address || "") + " " + p.note).toLowerCase().includes(q));
-      items.sort((a, b) => (a.dist ?? Infinity) - (b.dist ?? Infinity) || (b.createdAt || 0) - (a.createdAt || 0));
+      if (q) items = items.filter((p) => [p.name, p.address, p.note, dishSummary(p)].join(" ").toLowerCase().includes(q));
+      if (view.filter === "loved") items = items.filter((p) => (p.rating || 0) >= 4);
+      if (view.filter === "never") items = items.filter((p) => p.rating >= 1 && p.rating <= 2);
+      const newest = (a, b) => (b.createdAt || 0) - (a.createdAt || 0);
+      const sorters = {
+        closest: (a, b) => (a.dist ?? Infinity) - (b.dist ?? Infinity) || newest(a, b),
+        rating: (a, b) => (b.rating || 0) - (a.rating || 0) || newest(a, b),
+        newest,
+        name: (a, b) => a.name.localeCompare(b.name),
+      };
+      items.sort(sorters[view.sort] || sorters.closest);
       if (!items.length) {
-        list.append(el("p", "storage-note", "Nothing saved for “" + $("q").value.trim() + "” yet. Tap Add a place to leave a note for next time."));
+        list.append(el("p", "storage-note", q
+          ? "Nothing saved for “" + $("q").value.trim() + "” yet. Tap Add a place to leave a note for next time."
+          : "No places match this filter yet."));
       } else {
-        list.append(el("div", "label", q ? "Matching places" : loc.pos ? "Closest first" : "Your places"));
+        const labels = { closest: loc.pos ? "Closest first" : "Your places", rating: "Highest rated", newest: "Newest", name: "By name" };
+        list.append(el("div", "label", q ? "Matching places" : labels[view.sort]));
         items.forEach((p) => list.append(stub(p)));
       }
     }
+    $("controls").hidden = store.places.length < 2;
     $("storage-note").textContent = store.mode === "db"
       ? "Saved to your Claude account. Only you can see your places."
       : "Saved in this browser only.";
   }
 
   // ---------- Add / edit sheet ----------
-  let editing = null, draftCoord = null, draftUrl = null;
+  let editing = null, draftCoord = null, draftUrl = null, draftId = null;
+  let draftRating = null, draftDishes = [], draftPhotos = [], pendingPhotos = new Map(), removedPhotos = [];
+
+  function renderStars() {
+    const box = $("f-rating");
+    box.replaceChildren();
+    for (let i = 1; i <= 5; i++) {
+      const b = el("button", i <= (draftRating || 0) ? "on" : "", "★");
+      b.type = "button";
+      b.setAttribute("role", "radio");
+      b.setAttribute("aria-checked", String(draftRating === i));
+      b.setAttribute("aria-label", i + (i === 1 ? " star" : " stars"));
+      b.onclick = () => { draftRating = draftRating === i ? null : i; renderStars(); };
+      box.append(b);
+    }
+  }
+
+  function renderDishes() {
+    const rows = $("dish-rows");
+    rows.replaceChildren();
+    draftDishes.forEach((d, i) => {
+      const row = el("div", "dish-row");
+      const input = el("input"); input.value = d.name; input.setAttribute("aria-label", "Dish");
+      input.oninput = () => { d.name = input.value; };
+      const v = el("button", "verdict", d.verdict === "bad" ? "👎" : "👍"); v.type = "button";
+      v.setAttribute("aria-label", d.verdict === "bad" ? "Skip next time. Tap to change." : "Get again. Tap to change.");
+      v.onclick = () => { d.verdict = d.verdict === "bad" ? "good" : "bad"; renderDishes(); };
+      const x = el("button", "icon-btn", "×"); x.type = "button"; x.setAttribute("aria-label", "Remove " + d.name);
+      x.onclick = () => { draftDishes.splice(i, 1); renderDishes(); };
+      row.append(input, v, x);
+      rows.append(row);
+    });
+  }
+
+  function addDish(verdict) {
+    const name = $("f-dish").value.trim();
+    if (!name) return;
+    draftDishes.push({ name, verdict });
+    $("f-dish").value = "";
+    renderDishes();
+  }
+  $("add-good").onclick = () => addDish("good");
+  $("add-bad").onclick = () => addDish("bad");
+  $("f-dish").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addDish("good"); } });
+
+  function renderPhotoEdit() {
+    const box = $("photo-edit");
+    box.replaceChildren();
+    draftPhotos.forEach((ph, i) => {
+      const wrap = el("div", "ph");
+      const img = el("img"); img.src = ph.thumb; img.alt = "Photo " + (i + 1);
+      const x = el("button", null, "×"); x.type = "button"; x.setAttribute("aria-label", "Remove photo " + (i + 1));
+      x.onclick = () => {
+        draftPhotos.splice(i, 1);
+        if (pendingPhotos.has(ph.id)) pendingPhotos.delete(ph.id); else removedPhotos.push(ph.id);
+        renderPhotoEdit();
+      };
+      wrap.append(img, x);
+      box.append(wrap);
+    });
+    $("f-photos").disabled = draftPhotos.length >= MAX_PHOTOS;
+  }
+
+  $("f-photos").addEventListener("change", async () => {
+    const files = Array.from($("f-photos").files || []).slice(0, MAX_PHOTOS - draftPhotos.length);
+    $("f-photos").value = "";
+    if (!files.length) return;
+    $("photo-hint").textContent = "Adding " + files.length + (files.length === 1 ? " photo…" : " photos…");
+    let failed = 0;
+    for (const file of files) {
+      try {
+        const { thumb, full } = await readImage(file);
+        const id = newId();
+        draftPhotos.push({ id, thumb });
+        pendingPhotos.set(id, full);
+        renderPhotoEdit();
+      } catch { failed++; }
+    }
+    $("photo-hint").textContent = failed
+      ? "One photo couldn't be read. Try a JPEG or PNG."
+      : draftPhotos.length >= MAX_PHOTOS ? "That's the limit of " + MAX_PHOTOS + " photos for a place."
+      : "Take a photo, or add menus, dishes, receipts or screenshots from your library.";
+  });
 
   function setCoord(c, source) {
     draftCoord = c;
@@ -661,7 +991,17 @@ header p { margin: 6px 0 0; color: var(--muted); }
     $("parsed").hidden = true;
     $("f-name").value = place ? place.name : "";
     $("f-address").value = place ? place.address || "" : "";
-    $("f-note").value = place ? place.note : "";
+    $("f-note").value = place ? place.note || "" : "";
+    draftId = place && place.id ? place.id : newId();
+    draftRating = place ? place.rating || null : null;
+    draftDishes = place && place.dishes ? place.dishes.map((d) => ({ ...d })) : [];
+    draftPhotos = place && place.photos ? place.photos.map((ph) => ({ ...ph })) : [];
+    pendingPhotos = new Map();
+    removedPhotos = [];
+    $("f-dish").value = "";
+    renderStars();
+    renderDishes();
+    renderPhotoEdit();
     $("f-radius").value = String(place ? place.radius || 150 : 150);
     draftUrl = place ? place.url || null : null;
     setCoord(place && hasCoord(place) ? { lat: place.lat, lng: place.lng } : null, place && hasCoord(place) ? "saved" : "");
@@ -726,11 +1066,23 @@ header p { margin: 6px 0 0; color: var(--muted); }
 
   $("form").addEventListener("submit", async (e) => {
     e.preventDefault();
+    addDish("good"); // keep a dish that was typed but not added
     const name = $("f-name").value.trim(), note = $("f-note").value.trim();
-    if (!name || !note) return;
+    const dishes = draftDishes.map((d) => ({ name: d.name.trim(), verdict: d.verdict })).filter((d) => d.name);
+    if (!name) { $("f-name").focus(); return; }
+    if (!note && !draftRating && !dishes.length && !draftPhotos.length) {
+      $("parsed").hidden = false;
+      $("parsed").classList.add("warn");
+      $("parsed").textContent = "Add a note, a rating, a dish or a photo to save this place.";
+      $("f-note").focus();
+      return;
+    }
     const place = {
-      id: editing ? editing.id : (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)),
+      id: draftId,
       name, note,
+      rating: draftRating,
+      dishes,
+      photos: draftPhotos,
       address: $("f-address").value.trim() || null,
       radius: +$("f-radius").value,
       enabled: editing ? editing.enabled !== false : true,
@@ -741,7 +1093,9 @@ header p { margin: 6px 0 0; color: var(--muted); }
     };
     $("save-btn").disabled = true;
     try {
+      for (const [id, full] of pendingPhotos) await photoStore.put(place.id, id, full);
       await store.put(place);
+      await photoStore.remove(place.id, removedPhotos);
       closeSheet();
     } catch (err) {
       $("parsed").hidden = false;
@@ -755,6 +1109,37 @@ header p { margin: 6px 0 0; color: var(--muted); }
   $("q").addEventListener("input", render);
   $("loc-btn").onclick = startLocation;
 
+  // ---------- Photo viewer ----------
+  const viewer = { place: null, index: 0 };
+  async function showViewerPhoto() {
+    const { place, index } = viewer;
+    const ph = place.photos[index];
+    $("viewer-count").textContent = (index + 1) + " of " + place.photos.length;
+    $("viewer-prev").disabled = index === 0;
+    $("viewer-next").disabled = index === place.photos.length - 1;
+    $("viewer-img").src = ph.thumb;
+    $("viewer-img").alt = "Photo " + (index + 1) + " of " + place.name;
+    try {
+      const full = await photoStore.get(place.id, ph.id);
+      if (full && viewer.place === place && viewer.index === index) $("viewer-img").src = full;
+    } catch {}
+  }
+  function openViewer(place, index) {
+    viewer.place = place; viewer.index = index;
+    $("viewer").hidden = false;
+    showViewerPhoto();
+  }
+  function closeViewer() { $("viewer").hidden = true; $("viewer-img").removeAttribute("src"); }
+  $("viewer-close").onclick = closeViewer;
+  $("viewer-prev").onclick = () => { if (viewer.index > 0) { viewer.index--; showViewerPhoto(); } };
+  $("viewer-next").onclick = () => { if (viewer.index < viewer.place.photos.length - 1) { viewer.index++; showViewerPhoto(); } };
+  document.addEventListener("keydown", (e) => {
+    if ($("viewer").hidden) return;
+    if (e.key === "Escape") closeViewer();
+    if (e.key === "ArrowLeft") $("viewer-prev").click();
+    if (e.key === "ArrowRight") $("viewer-next").click();
+  });
+
   // ---------- Notes from Siri (via a Shortcut that opens ?note=…&lat=…&lng=…&name=…) ----------
   const SAME_PLACE_METERS = 40;
 
@@ -762,7 +1147,7 @@ header p { margin: 6px 0 0; color: var(--muted); }
     const near = coord && store.places.find((p) => hasCoord(p) && distance(coord, p) <= SAME_PLACE_METERS);
     if (near) {
       await store.put({ ...near, note: near.note ? near.note + "\n" + text : text, enabled: true });
-      showBanner({ ...near, note: text }, false, "Added to " + near.name);
+      showBanner(near, false, "Added to " + near.name, text);
       return;
     }
     const place = {
@@ -778,13 +1163,22 @@ header p { margin: 6px 0 0; color: var(--muted); }
       lng: coord ? coord.lng : null,
     };
     await store.put(place);
-    if (name) showBanner(place, false, "Saved for " + place.name);
+    if (name) showBanner(place, false, "Saved for " + place.name, text);
     else { openSheet(place); $("f-name").select(); } // No place name came through, so let the user type one.
   }
 
   function handleIncomingNote() {
     let params;
     try { params = new URLSearchParams(window.location.search); } catch { return; }
+    const shared = (params.get("share") || "").trim();
+    if (shared) {
+      // From the "Save to Next Time" share shortcut: open a new place with the Google Maps link filled in.
+      try { history.replaceState(null, "", window.location.pathname + window.location.hash); } catch {}
+      openSheet();
+      $("f-paste").value = shared;
+      $("f-paste").dispatchEvent(new Event("input"));
+      return;
+    }
     const text = (params.get("note") || "").trim();
     if (!text) return;
     // Drop the query so reloading the page doesn't save the note twice.
@@ -808,21 +1202,23 @@ header p { margin: 6px 0 0; color: var(--muted); }
     } catch { saveIncomingNote(text, null, name, address).catch(() => {}); }
   }
 
-  $("copy-url").onclick = async () => {
-    const text = $("siri-url").textContent;
-    try {
-      await navigator.clipboard.writeText(text);
-      $("copy-url").textContent = "Copied";
-    } catch {
-      const range = document.createRange();
-      range.selectNodeContents($("siri-url"));
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      $("copy-url").textContent = "Selected: tap Copy";
-    }
-    setTimeout(() => { $("copy-url").textContent = "Copy link"; }, 2500);
-  };
+  document.querySelectorAll("[data-copy]").forEach((btn) => {
+    btn.onclick = async () => {
+      const code = $(btn.dataset.copy);
+      try {
+        await navigator.clipboard.writeText(code.textContent);
+        btn.textContent = "Copied";
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents(code);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        btn.textContent = "Selected: tap Copy";
+      }
+      setTimeout(() => { btn.textContent = "Copy link"; }, 2500);
+    };
+  });
 
   // ---------- Boot ----------
   store.loadLocal();
