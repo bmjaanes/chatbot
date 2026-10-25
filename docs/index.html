@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#111816" media="(prefers-color-scheme: dark)">
 <title>Next Time</title>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
 <style>
 :root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
 body { margin: 0; }
@@ -208,6 +209,22 @@ header p { margin: 6px 0 0; color: var(--muted); }
 
 .storage-note { font-size: 0.8rem; color: var(--muted); text-align: center; }
 
+.siri { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+.siri summary {
+  display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer;
+  font-weight: 700; color: var(--teal); list-style: none;
+}
+.siri summary::-webkit-details-marker { display: none; }
+.siri summary::after { content: "+"; margin-left: auto; font-size: 1.2rem; color: var(--muted); }
+.siri[open] summary::after { content: "–"; }
+.siri-body { padding: 0 16px 16px; display: grid; gap: 10px; font-size: 0.95rem; }
+.siri-body p { margin: 0; }
+.siri-body ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+.siri-body code { font-size: 0.82rem; background: var(--bg); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }
+.siri-body .hint { color: var(--muted); font-size: 0.85rem; }
+.url-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
+.url-row code { flex: 1 1 220px; min-width: 0; padding: 8px 10px; }
+
 @media (prefers-reduced-motion: reduce) {
   .banner { transition: none; }
 }
@@ -234,6 +251,32 @@ header p { margin: 6px 0 0; color: var(--muted); }
 
   <div class="list" id="list"></div>
   <p class="storage-note" id="storage-note"></p>
+
+  <details class="siri" id="siri">
+    <summary>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      Add notes with Siri
+    </summary>
+    <div class="siri-body">
+      <p>Say <b>“Hey Siri, Next Time Note”</b>, tell Siri what to remember, and it's saved for the place you're at. Set it up once in the Shortcuts app:</p>
+      <ol>
+        <li>Open <b>Shortcuts</b>, tap <b>+</b>, and name the shortcut <b>Next Time Note</b>.</li>
+        <li>Add <b>Ask for Input</b>. Set the question to <i>What do you want to remember for next time?</i></li>
+        <li>Add <b>URL Encode</b>. It encodes the <i>Provided Input</i> automatically.</li>
+        <li>Add <b>Get Current Location</b>.</li>
+        <li>Add <b>Get Details of Locations</b> and set it to <i>Name</i>, then add another <b>URL Encode</b>.</li>
+        <li>Add <b>Text</b> and paste this link:
+          <span class="url-row"><code id="siri-url">https://bmjaanes.github.io/chatbot/?note=NOTE&amp;name=NAME&amp;lat=LAT&amp;lng=LNG</code><button type="button" class="chip-btn" id="copy-url">Copy link</button></span>
+          Then swap each placeholder for a variable. Tap the variable button above the keyboard:
+          <code>NOTE</code> → the first <i>URL Encoded Text</i>,
+          <code>NAME</code> → the second <i>URL Encoded Text</i>,
+          <code>LAT</code> → <i>Current Location</i>, then tap it and choose <i>Latitude</i>,
+          <code>LNG</code> → <i>Current Location</i>, then <i>Longitude</i>.</li>
+        <li>Add <b>Open URLs</b>.</li>
+      </ol>
+      <p class="hint">Notes from Siri open the web app at bmjaanes.github.io/chatbot in Safari and are saved there. The first time, Shortcuts asks to use your location. Choose <b>Always Allow</b> so Siri doesn't ask again. If Shortcuts can't name the place, the edit screen opens so you can type a name. If it names the street instead of the business, tap <b>Edit</b> to rename it.</p>
+    </div>
+  </details>
 </div>
 
 <button class="fab" id="add-btn" type="button">
@@ -496,9 +539,9 @@ header p { margin: 6px 0 0; color: var(--muted); }
 
   // ---------- Banner ----------
   let bannerTimer = null, bannerPlace = null;
-  function showBanner(place, demo) {
+  function showBanner(place, demo, title) {
     bannerPlace = place.id;
-    $("banner-title").textContent = "Back at " + place.name;
+    $("banner-title").textContent = title || "Back at " + place.name;
     $("banner-body").textContent = place.note;
     $("banner-demo").hidden = !demo;
     $("banner").classList.add("show");
@@ -712,10 +755,80 @@ header p { margin: 6px 0 0; color: var(--muted); }
   $("q").addEventListener("input", render);
   $("loc-btn").onclick = startLocation;
 
+  // ---------- Notes from Siri (via a Shortcut that opens ?note=…&lat=…&lng=…&name=…) ----------
+  const SAME_PLACE_METERS = 40;
+
+  async function saveIncomingNote(text, coord, name, address) {
+    const near = coord && store.places.find((p) => hasCoord(p) && distance(coord, p) <= SAME_PLACE_METERS);
+    if (near) {
+      await store.put({ ...near, note: near.note ? near.note + "\n" + text : text, enabled: true });
+      showBanner({ ...near, note: text }, false, "Added to " + near.name);
+      return;
+    }
+    const place = {
+      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2),
+      name: name || address || (coord ? "Saved spot" : "Unnamed place"),
+      note: text,
+      address: address && address !== name ? address : null,
+      radius: 150,
+      enabled: true,
+      url: null,
+      createdAt: Date.now(),
+      lat: coord ? coord.lat : null,
+      lng: coord ? coord.lng : null,
+    };
+    await store.put(place);
+    if (name) showBanner(place, false, "Saved for " + place.name);
+    else { openSheet(place); $("f-name").select(); } // No place name came through, so let the user type one.
+  }
+
+  function handleIncomingNote() {
+    let params;
+    try { params = new URLSearchParams(window.location.search); } catch { return; }
+    const text = (params.get("note") || "").trim();
+    if (!text) return;
+    // Drop the query so reloading the page doesn't save the note twice.
+    try { history.replaceState(null, "", window.location.pathname + window.location.hash); } catch {}
+
+    const lat = parseFloat(params.get("lat")), lng = parseFloat(params.get("lng"));
+    const coord = Number.isFinite(lat) && Number.isFinite(lng) ? valid(lat, lng) : null;
+    const name = (params.get("name") || "").trim();
+    const address = (params.get("address") || "").trim();
+    if (coord || !("geolocation" in navigator)) {
+      saveIncomingNote(text, coord, name, address).catch(() => {});
+      return;
+    }
+    // The Shortcut didn't send a location: ask the browser.
+    try {
+      navigator.geolocation.getCurrentPosition(
+        (p) => saveIncomingNote(text, { lat: p.coords.latitude, lng: p.coords.longitude }, name, address).catch(() => {}),
+        () => saveIncomingNote(text, null, name, address).catch(() => {}),
+        { enableHighAccuracy: true, timeout: 15000 }
+      );
+    } catch { saveIncomingNote(text, null, name, address).catch(() => {}); }
+  }
+
+  $("copy-url").onclick = async () => {
+    const text = $("siri-url").textContent;
+    try {
+      await navigator.clipboard.writeText(text);
+      $("copy-url").textContent = "Copied";
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents($("siri-url"));
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      $("copy-url").textContent = "Selected: tap Copy";
+    }
+    setTimeout(() => { $("copy-url").textContent = "Copy link"; }, 2500);
+  };
+
   // ---------- Boot ----------
   store.loadLocal();
   setLoc("off");
   render();
+  handleIncomingNote();
   store.connect();
   try {
     navigator.permissions && navigator.permissions.query({ name: "geolocation" })
