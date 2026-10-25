@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Next Time">
+<meta name="theme-color" content="#eef2ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111816" media="(prefers-color-scheme: dark)">
+<title>Next Time</title>
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=Kalam:wght@400;700&display=swap">
+<style>
+/* Layout: a single phone column. Saved places are "ticket stubs" with the note handwritten on them; an iOS-style banner drops in on arrival. */
+:root {
+  --bg: #eef2ef;
+  --surface: #ffffff;
+  --ink: #1b2a28;
+  --muted: #5d6f6b;
+  --line: #d3ddd9;
+  --teal: #23705f;
+  --teal-soft: #dcebe6;
+  --marigold: #e09a2c;
+  --marigold-soft: #fbedd5;
+  --danger: #b4412f;
+  --banner: rgba(246, 248, 247, 0.92);
+  --shadow: 0 1px 2px rgba(20, 40, 35, 0.06), 0 6px 18px rgba(20, 40, 35, 0.07);
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+  --hand: "Kalam", "Bradley Hand", "Segoe Print", cursive;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111816; --surface: #1a2421; --ink: #e5ece9; --muted: #95a8a3; --line: #2c3a36;
+    --teal: #5fb7a2; --teal-soft: #1f3631; --marigold: #f0b351; --marigold-soft: #3a2e19;
+    --danger: #e27a68; --banner: rgba(40, 50, 47, 0.94);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 18px rgba(0, 0, 0, 0.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111816; --surface: #1a2421; --ink: #e5ece9; --muted: #95a8a3; --line: #2c3a36;
+  --teal: #5fb7a2; --teal-soft: #1f3631; --marigold: #f0b351; --marigold-soft: #3a2e19;
+  --danger: #e27a68; --banner: rgba(40, 50, 47, 0.94);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 18px rgba(0, 0, 0, 0.25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 120px;
+}
+.wrap { max-width: 560px; margin: 0 auto; display: grid; gap: 18px; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+header h1 {
+  font-family: var(--display); font-weight: 800; font-size: 2.1rem; letter-spacing: -0.02em;
+  margin: 0; line-height: 1; text-wrap: balance;
+}
+header p { margin: 6px 0 0; color: var(--muted); }
+
+.search {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 0 14px;
+}
+.search svg { flex: none; color: var(--muted); }
+.search input { border: 0; background: transparent; padding: 14px 0; width: 100%; min-width: 0; outline: none; }
+
+.loc {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  font-size: 0.9rem; color: var(--muted);
+}
+.loc .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); flex: none; }
+.loc.on .dot { background: var(--teal); box-shadow: 0 0 0 4px var(--teal-soft); }
+.loc span { flex: 1; min-width: 0; }
+.chip-btn {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px;
+  font-size: 0.85rem; font-weight: 700;
+}
+
+.list { display: grid; gap: 14px; }
+.label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
+
+/* Ticket stub: a perforated left edge separates the pin column from the note. */
+.stub {
+  display: grid; grid-template-columns: 52px 1fr;
+  background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden;
+}
+.stub.here { outline: 2px solid var(--marigold); }
+.stub.off { opacity: 0.6; }
+.stub .pin {
+  background: var(--teal-soft); color: var(--teal);
+  display: flex; justify-content: center; padding-top: 18px;
+  border-right: 2px dashed var(--line);
+}
+.stub.here .pin { background: var(--marigold-soft); color: var(--marigold); }
+.stub .body { padding: 14px 16px 12px; display: grid; gap: 6px; min-width: 0; }
+.stub h2 { font-family: var(--display); font-weight: 600; font-size: 1.15rem; margin: 0; line-height: 1.2; overflow-wrap: anywhere; }
+.stub .addr { color: var(--muted); font-size: 0.85rem; overflow-wrap: anywhere; }
+.stub .note {
+  font-family: var(--hand); font-size: 1.25rem; line-height: 1.3; margin: 4px 0 2px;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag {
+  font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+  background: var(--bg); color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.tag.here { background: var(--marigold); color: #2b1d05; }
+.actions { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 4px; }
+.actions button, .actions a {
+  background: none; border: 0; padding: 6px 0; color: var(--teal); font-weight: 700; font-size: 0.88rem;
+  text-decoration: none;
+}
+.actions .danger { color: var(--danger); }
+
+.empty {
+  background: var(--surface); border-radius: 16px; padding: 20px; display: grid; gap: 14px; box-shadow: var(--shadow);
+}
+.empty h2 { font-family: var(--display); font-weight: 600; font-size: 1.3rem; margin: 0; text-wrap: balance; }
+.empty p { margin: 0; color: var(--muted); }
+.empty .stub { box-shadow: none; border: 1px dashed var(--line); }
+.primary {
+  background: var(--teal); color: var(--surface); border: 0; border-radius: 12px; padding: 13px 18px; font-weight: 700;
+}
+.ghost { background: none; border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; font-weight: 700; }
+
+.fab {
+  position: fixed; z-index: 20;
+  right: calc(max(16px, env(safe-area-inset-right, 0px)) + 4px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  display: flex; align-items: center; gap: 8px;
+  background: var(--ink); color: var(--bg); border: 0; border-radius: 999px; padding: 15px 20px;
+  font-weight: 700; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Bottom sheet for add/edit */
+.scrim { position: fixed; inset: 0; background: rgba(10, 20, 18, 0.45); z-index: 30; }
+.sheet {
+  position: fixed; z-index: 31; left: 0; right: 0; bottom: 0;
+  max-height: 92%; overflow-y: auto;
+  background: var(--bg); border-radius: 20px 20px 0 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 10px calc(env(safe-area-inset-bottom, 0px) + 20px);
+}
+.sheet form { max-width: 560px; margin: 0 auto; display: grid; gap: 16px; }
+.grabber { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 4px; }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.sheet-head h2 { font-family: var(--display); font-weight: 600; margin: 0; font-size: 1.3rem; }
+.sheet-head button { background: none; border: 0; color: var(--teal); font-weight: 700; padding: 6px 0; }
+.field { display: grid; gap: 6px; }
+.field label { font-weight: 700; font-size: 0.9rem; }
+.field .hint { font-size: 0.82rem; color: var(--muted); }
+.field input, .field textarea, .field select {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; width: 100%;
+}
+.field textarea { resize: vertical; }
+#f-note { font-family: var(--hand); font-size: 1.25rem; line-height: 1.3; }
+.paste-box { background: var(--teal-soft); border-radius: 14px; padding: 14px; display: grid; gap: 8px; }
+.paste-box textarea { background: var(--surface); }
+.parsed { font-size: 0.85rem; color: var(--teal); font-weight: 700; }
+.parsed.warn { color: var(--marigold); }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.coords { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.form-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
+
+/* iOS-style notification banner */
+.banner {
+  position: fixed; z-index: 40;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  left: max(10px, env(safe-area-inset-left, 0px)); right: max(10px, env(safe-area-inset-right, 0px));
+  max-width: 520px; margin: 0 auto;
+  background: var(--banner); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border-radius: 22px; padding: 12px 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+  display: grid; grid-template-columns: 38px 1fr; gap: 4px 12px; align-items: start;
+  transform: translateY(-140%); transition: transform 0.35s cubic-bezier(.2, .9, .3, 1.2);
+  border: 0; text-align: left; width: auto;
+}
+.banner.show { transform: translateY(0); }
+.banner .icon {
+  grid-row: span 2; width: 38px; height: 38px; border-radius: 9px; background: var(--teal); color: var(--surface);
+  display: grid; place-items: center;
+}
+.banner .top { display: flex; justify-content: space-between; gap: 8px; font-size: 0.8rem; color: var(--muted); }
+.banner .top b { text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.72rem; }
+.banner .msg { min-width: 0; }
+.banner .msg strong { display: block; font-size: 0.95rem; }
+.banner .msg span { display: block; font-size: 0.92rem; overflow-wrap: anywhere; }
+.banner .demo { grid-column: 2; font-size: 0.72rem; color: var(--muted); }
+
+.storage-note { font-size: 0.8rem; color: var(--muted); text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .banner { transition: none; }
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Next Time</h1>
+    <p>Notes to yourself for the next time you're somewhere.</p>
+  </header>
+
+  <label class="search" for="q">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="Where are you? Type the place name" autocomplete="off">
+  </label>
+
+  <div class="loc" id="loc">
+    <i class="dot"></i>
+    <span id="loc-text">Near-me alerts are off.</span>
+    <button class="chip-btn" id="loc-btn" type="button">Turn on</button>
+  </div>
+
+  <div class="list" id="list"></div>
+  <p class="storage-note" id="storage-note"></p>
+</div>
+
+<button class="fab" id="add-btn" type="button">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  Add a place
+</button>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+  <form id="form" autocomplete="off">
+    <div class="grabber"></div>
+    <div class="sheet-head">
+      <h2 id="sheet-title">New place</h2>
+      <button type="button" id="cancel-btn">Cancel</button>
+    </div>
+
+    <div class="paste-box">
+      <div class="field">
+        <label for="f-paste">Paste from Google Maps</label>
+        <textarea id="f-paste" rows="3" placeholder="In Google Maps: open the place, tap Share, then Copy. Paste here."></textarea>
+      </div>
+      <div class="parsed" id="parsed" hidden></div>
+    </div>
+
+    <div class="field">
+      <label for="f-name">Place</label>
+      <input id="f-name" required placeholder="Joe's Fish Shack">
+    </div>
+    <div class="field">
+      <label for="f-address">Address <span class="hint">(optional)</span></label>
+      <input id="f-address" placeholder="12 Main St, Portland">
+    </div>
+
+    <div class="field">
+      <span class="label">Location</span>
+      <div class="row">
+        <button type="button" class="ghost" id="here-btn">Use where I am now</button>
+        <span class="coords" id="coords">No location yet</span>
+      </div>
+      <span class="hint" id="coords-hint">Needed for arrival alerts. A full Google Maps link fills it in.</span>
+    </div>
+
+    <div class="field">
+      <label for="f-note">Next time I'm here…</label>
+      <textarea id="f-note" rows="3" required placeholder="Don't get the fish. The burger was great."></textarea>
+    </div>
+
+    <div class="field">
+      <label for="f-radius">Remind me within</label>
+      <select id="f-radius">
+        <option value="100">100 m (about a block)</option>
+        <option value="150" selected>150 m</option>
+        <option value="250">250 m</option>
+        <option value="500">500 m</option>
+      </select>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="ghost" id="cancel-btn-2">Cancel</button>
+      <button type="submit" class="primary" id="save-btn">Save place</button>
+    </div>
+  </form>
+</div>
+
+<button class="banner" id="banner" type="button" aria-live="polite">
+  <span class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg></span>
+  <span class="top"><b>Next Time</b><span>now</span></span>
+  <span class="msg"><strong id="banner-title"></strong><span id="banner-body"></span></span>
+  <span class="demo" id="banner-demo" hidden>Preview of the alert your phone shows on arrival</span>
+</button>
+
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const LOCAL_KEY = "next-time-places";
+  const imperial = /^en-(US|LR|MM)/.test(navigator.language || "");
+
+  // ---------- Storage: per-person db when running in Claude, browser storage otherwise ----------
+  const store = {
+    mode: "local",
+    places: [],
+    col: null,
+    loadLocal() {
+      try { this.places = JSON.parse(localStorage.getItem(LOCAL_KEY) || "[]"); } catch { this.places = []; }
+    },
+    saveLocal() {
+      try { localStorage.setItem(LOCAL_KEY, JSON.stringify(this.places)); } catch {}
+    },
+    async connect() {
+      if (!window.claude || typeof window.claude.use !== "function") return;
+      try {
+        const [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+        const uid = user ? await user.id() : null;
+        if (!db || !uid) return;
+        this.col = db.collection("data/users/" + uid);
+        this.col.onSnapshot((snap) => {
+          this.mode = "db";
+          this.places = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
+          render();
+        }, () => { this.mode = "local"; this.col = null; this.loadLocal(); render(); });
+      } catch {}
+    },
+    async put(place) {
+      const { id, dist, ...body } = place;
+      place = { id, ...body };
+      if (this.mode === "db" && this.col) {
+        await this.col.doc(id).set(body);
+      } else {
+        const i = this.places.findIndex((p) => p.id === id);
+        if (i >= 0) this.places[i] = place; else this.places.unshift(place);
+        this.saveLocal();
+        render();
+      }
+    },
+    async remove(id) {
+      if (this.mode === "db" && this.col) {
+        await this.col.doc(id).delete();
+      } else {
+        this.places = this.places.filter((p) => p.id !== id);
+        this.saveLocal();
+        render();
+      }
+    },
+  };
+
+  // ---------- Google Maps share parsing (same rules as the iOS app) ----------
+  function coordPair(text) {
+    const m = /^\s*(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/.exec(text || "");
+    return m ? valid(+m[1], +m[2]) : null;
+  }
+  function lastPair(re, text) {
+    let m, last = null;
+    while ((m = re.exec(text))) last = m;
+    return last ? valid(+last[1], +last[2]) : null;
+  }
+  function valid(lat, lng) {
+    return Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? { lat, lng } : null;
+  }
+  function decode(s) {
+    const spaced = s.replace(/\+/g, " ");
+    try { return decodeURIComponent(spaced).trim(); } catch { return spaced.trim(); }
+  }
+
+  function parseShare(text) {
+    const out = {};
+    const lines = text.split(/\r?\n/).map((s) => s.trim()).filter((s) => s && !s.includes("://"));
+    if (lines[0]) out.name = lines[0];
+    if (lines[1]) out.address = lines[1];
+
+    const m = text.match(/(https?|comgooglemaps):\/\/[^\s<>"]+/);
+    if (!m) return out;
+    let url;
+    try { url = new URL(m[0]); } catch { return out; }
+    out.url = m[0];
+
+    const host = url.hostname.toLowerCase();
+    if (host.startsWith("consent.") && url.searchParams.get("continue")) {
+      const inner = parseShare(url.searchParams.get("continue"));
+      return { ...inner, name: inner.name || out.name, address: inner.address || out.address, url: out.url };
+    }
+    if (/^(maps\.app\.goo\.gl|goo\.gl|g\.co)$/.test(host)) { out.short = true; return out; }
+
+    const isGoogle = url.protocol === "comgooglemaps:" ||
+      ((/^google\./.test(host) || host.includes(".google.")) && (host.startsWith("maps.") || url.pathname.startsWith("/maps")));
+    if (!isGoogle) { out.notGoogle = true; return out; }
+
+    const segs = url.pathname.split("/").filter(Boolean);
+    let query = null;
+    const pi = segs.indexOf("place");
+    if (pi >= 0 && segs[pi + 1] && !segs[pi + 1].startsWith("@")) out.name = decode(segs[pi + 1]);
+    const si = segs.indexOf("search");
+    if (si >= 0 && segs[si + 1] && !segs[si + 1].startsWith("@")) {
+      const t = decode(segs[si + 1]);
+      const c = coordPair(t);
+      if (c) out.coord = c; else query = t;
+    }
+
+    let full = m[0];
+    try { full = decodeURIComponent(full); } catch {}
+    if (!out.coord) out.coord = lastPair(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/g, full);
+
+    for (const key of ["q", "query", "destination", "daddr", "ll", "center"]) {
+      const raw = url.searchParams.get(key);
+      if (!raw) continue;
+      const c = coordPair(raw);
+      if (c) { if (!out.coord) out.coord = c; }
+      else if (!query && key !== "ll" && key !== "center") query = raw;
+    }
+    if (!out.coord) out.coord = lastPair(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g, url.pathname);
+
+    // "?q=Joe's Fish Shack, 12 Main St" → name + address
+    if (query && pi < 0) {
+      const [first, ...rest] = query.split(",");
+      if (!lines[0]) out.name = first.trim();
+      if (!out.address && rest.length) out.address = rest.join(",").trim();
+    }
+    if (!out.coord) delete out.coord;
+    return out;
+  }
+
+  // ---------- Location ----------
+  const loc = { status: "off", pos: null, watch: null, inside: new Set(), first: true };
+
+  function distance(a, b) {
+    const R = 6371000, rad = Math.PI / 180;
+    const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  function fmtDistance(m) {
+    if (imperial) {
+      const ft = m * 3.28084;
+      return ft < 1000 ? Math.round(ft / 10) * 10 + " ft" : (m / 1609.34).toFixed(ft < 52800 ? 1 : 0) + " mi";
+    }
+    return m < 1000 ? Math.round(m / 5) * 5 + " m" : (m / 1000).toFixed(m < 10000 ? 1 : 0) + " km";
+  }
+
+  function startLocation() {
+    if (!("geolocation" in navigator)) return setLoc("unavailable");
+    setLoc("waiting");
+    try {
+      loc.watch = navigator.geolocation.watchPosition(
+        (p) => {
+          loc.pos = { lat: p.coords.latitude, lng: p.coords.longitude };
+          setLoc("on");
+          checkArrivals();
+          render();
+        },
+        (e) => setLoc(e && e.code === 1 ? "denied" : "unavailable"),
+        { enableHighAccuracy: true, maximumAge: 20000, timeout: 20000 }
+      );
+    } catch { setLoc("unavailable"); }
+  }
+
+  function setLoc(status) {
+    loc.status = status;
+    const text = {
+      off: "Near-me alerts are off.",
+      waiting: "Finding your location…",
+      on: "Watching for places you've saved while this page is open.",
+      denied: "Location is blocked. Alerts can't run, but you can still look places up and use Simulate arrival.",
+      unavailable: "Location isn't available in this browser. Use Simulate arrival to try the alert.",
+    }[status];
+    $("loc-text").textContent = text;
+    $("loc").classList.toggle("on", status === "on");
+    $("loc-btn").hidden = status !== "off";
+    if (status !== "on" && status !== "waiting") $("here-btn").hidden = status !== "off";
+  }
+
+  function checkArrivals() {
+    if (!loc.pos) return;
+    for (const p of store.places) {
+      if (!hasCoord(p) || p.enabled === false) continue;
+      const inside = distance(loc.pos, p) <= (p.radius || 150);
+      if (inside && !loc.inside.has(p.id)) showBanner(p, false);
+      if (inside) loc.inside.add(p.id); else loc.inside.delete(p.id);
+    }
+  }
+
+  // ---------- Banner ----------
+  let bannerTimer = null, bannerPlace = null;
+  function showBanner(place, demo) {
+    bannerPlace = place.id;
+    $("banner-title").textContent = "Back at " + place.name;
+    $("banner-body").textContent = place.note;
+    $("banner-demo").hidden = !demo;
+    $("banner").classList.add("show");
+    if (navigator.vibrate) { try { navigator.vibrate(120); } catch {} }
+    clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(hideBanner, 6000);
+  }
+  function hideBanner() { $("banner").classList.remove("show"); }
+  $("banner").addEventListener("click", () => {
+    hideBanner();
+    const el = document.querySelector('[data-id="' + CSS.escape(bannerPlace || "") + '"]');
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+
+  // ---------- Rendering ----------
+  const hasCoord = (p) => typeof p.lat === "number" && typeof p.lng === "number";
+  const PIN = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>';
+
+  function mapsLink(p) {
+    if (p.url && !/^comgooglemaps:/.test(p.url)) return p.url;
+    const q = [p.name, p.address].filter(Boolean).join(", ") || (hasCoord(p) ? p.lat + "," + p.lng : "");
+    return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
+  }
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function stub(p, { example = false } = {}) {
+    const d = p.dist;
+    const here = d != null && d <= (p.radius || 150);
+    const card = el("article", "stub" + (here ? " here" : "") + (p.enabled === false ? " off" : ""));
+    card.dataset.id = p.id;
+    const pin = el("div", "pin"); pin.innerHTML = PIN;
+    const body = el("div", "body");
+    body.append(el("h2", null, p.name));
+    if (p.address) body.append(el("div", "addr", p.address));
+    body.append(el("p", "note", p.note));
+
+    const meta = el("div", "meta");
+    if (example) meta.append(el("span", "tag", "Example"));
+    if (here) meta.append(el("span", "tag here", "You're here"));
+    else if (d != null) meta.append(el("span", "tag", fmtDistance(d) + " away"));
+    if (!example) {
+      if (!hasCoord(p)) meta.append(el("span", "tag", "No location: name lookup only"));
+      else meta.append(el("span", "tag", "Alert within " + fmtDistance(p.radius || 150)));
+      if (p.enabled === false) meta.append(el("span", "tag", "Paused"));
+    }
+    body.append(meta);
+
+    if (!example) {
+      const actions = el("div", "actions");
+      const sim = el("button", null, "Simulate arrival"); sim.type = "button";
+      sim.onclick = () => showBanner(p, true);
+      const maps = el("a", null, "Google Maps"); maps.href = mapsLink(p); maps.target = "_blank"; maps.rel = "noopener";
+      const edit = el("button", null, "Edit"); edit.type = "button"; edit.onclick = () => openSheet(p);
+      const pause = el("button", null, p.enabled === false ? "Resume" : "Pause"); pause.type = "button";
+      pause.onclick = () => store.put({ ...p, dist: undefined, enabled: p.enabled === false });
+      const del = el("button", "danger", "Delete"); del.type = "button";
+      del.onclick = () => {
+        if (del.dataset.armed) { store.remove(p.id); return; }
+        del.dataset.armed = "1"; del.textContent = "Tap again to delete";
+        setTimeout(() => { delete del.dataset.armed; del.textContent = "Delete"; }, 3000);
+      };
+      actions.append(sim, maps, edit, pause, del);
+      body.append(actions);
+    }
+    card.append(pin, body);
+    return card;
+  }
+
+  function render() {
+    const list = $("list");
+    list.replaceChildren();
+    const q = $("q").value.trim().toLowerCase();
+
+    if (!store.places.length) {
+      const box = el("section", "empty");
+      box.append(el("h2", null, "Save a note for the next time you're somewhere"));
+      box.append(el("p", null, "At a restaurant and the fish was a letdown? Save it here. When you come back, you'll be reminded."));
+      box.append(stub({ id: "example", name: "Joe's Fish Shack", address: "12 Main St, Portland", note: "Don't get the fish. Burger was great, ask for extra pickles." }, { example: true }));
+      const add = el("button", "primary", "Add your first place"); add.type = "button"; add.onclick = () => openSheet();
+      box.append(add);
+      list.append(box);
+    } else {
+      let items = store.places.map((p) => ({ ...p, dist: loc.pos && hasCoord(p) ? distance(loc.pos, p) : null }));
+      if (q) items = items.filter((p) => (p.name + " " + (p.address || "") + " " + p.note).toLowerCase().includes(q));
+      items.sort((a, b) => (a.dist ?? Infinity) - (b.dist ?? Infinity) || (b.createdAt || 0) - (a.createdAt || 0));
+      if (!items.length) {
+        list.append(el("p", "storage-note", "Nothing saved for “" + $("q").value.trim() + "” yet. Tap Add a place to leave a note for next time."));
+      } else {
+        list.append(el("div", "label", q ? "Matching places" : loc.pos ? "Closest first" : "Your places"));
+        items.forEach((p) => list.append(stub(p)));
+      }
+    }
+    $("storage-note").textContent = store.mode === "db"
+      ? "Saved to your Claude account. Only you can see your places."
+      : "Saved in this browser only.";
+  }
+
+  // ---------- Add / edit sheet ----------
+  let editing = null, draftCoord = null, draftUrl = null;
+
+  function setCoord(c, source) {
+    draftCoord = c;
+    $("coords").textContent = c ? c.lat.toFixed(5) + ", " + c.lng.toFixed(5) + (source ? " · " + source : "") : "No location yet";
+  }
+
+  function openSheet(place) {
+    editing = place || null;
+    $("sheet-title").textContent = place ? "Edit place" : "New place";
+    $("save-btn").textContent = place ? "Save changes" : "Save place";
+    $("f-paste").value = "";
+    $("parsed").hidden = true;
+    $("f-name").value = place ? place.name : "";
+    $("f-address").value = place ? place.address || "" : "";
+    $("f-note").value = place ? place.note : "";
+    $("f-radius").value = String(place ? place.radius || 150 : 150);
+    draftUrl = place ? place.url || null : null;
+    setCoord(place && hasCoord(place) ? { lat: place.lat, lng: place.lng } : null, place && hasCoord(place) ? "saved" : "");
+    $("here-btn").hidden = loc.status === "denied" || loc.status === "unavailable";
+    $("scrim").hidden = false;
+    $("sheet").hidden = false;
+    $("sheet").scrollTop = 0;
+  }
+  function closeSheet() { $("scrim").hidden = true; $("sheet").hidden = true; }
+
+  $("add-btn").onclick = () => openSheet();
+  $("cancel-btn").onclick = closeSheet;
+  $("cancel-btn-2").onclick = closeSheet;
+  $("scrim").onclick = closeSheet;
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("sheet").hidden) closeSheet(); });
+
+  $("f-paste").addEventListener("input", () => {
+    const text = $("f-paste").value.trim();
+    const box = $("parsed");
+    if (!text) { box.hidden = true; return; }
+    const info = parseShare(text);
+    box.hidden = false;
+    box.classList.remove("warn");
+    if (info.notGoogle) { box.textContent = "That link isn't from Google Maps."; box.classList.add("warn"); return; }
+    if (info.name) $("f-name").value = info.name;
+    if (info.address) $("f-address").value = info.address;
+    if (info.url) draftUrl = info.url;
+    if (info.coord) {
+      setCoord(info.coord, "from Google Maps");
+      box.textContent = "Found " + (info.name || "the place") + " with its location.";
+    } else if (info.short) {
+      box.textContent = "Got the name" + (info.address ? " and address" : "") + ". Short links don't include a location, so tap Use where I am now when you're there.";
+      box.classList.add("warn");
+    } else if (info.name) {
+      box.textContent = "Got the name, but no location in that link.";
+      box.classList.add("warn");
+    } else {
+      box.textContent = "Couldn't find a place in that text.";
+      box.classList.add("warn");
+    }
+    if (!$("f-note").value) $("f-note").focus();
+  });
+
+  $("here-btn").onclick = () => {
+    if (loc.pos) { setCoord(loc.pos, "your location"); return; }
+    if (!("geolocation" in navigator)) { setLoc("unavailable"); $("here-btn").hidden = true; return; }
+    $("coords").textContent = "Finding you…";
+    try {
+      navigator.geolocation.getCurrentPosition(
+        (p) => setCoord({ lat: p.coords.latitude, lng: p.coords.longitude }, "your location"),
+        (e) => {
+          setCoord(draftCoord);
+          $("coords-hint").textContent = e && e.code === 1
+            ? "Location is blocked, so this place will be matched by name only."
+            : "Location isn't available right now. Paste a full Google Maps link to set it, or leave it and use name lookup.";
+          $("here-btn").hidden = true;
+        },
+        { enableHighAccuracy: true, timeout: 15000 }
+      );
+    } catch { setCoord(draftCoord); }
+  };
+
+  $("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = $("f-name").value.trim(), note = $("f-note").value.trim();
+    if (!name || !note) return;
+    const place = {
+      id: editing ? editing.id : (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)),
+      name, note,
+      address: $("f-address").value.trim() || null,
+      radius: +$("f-radius").value,
+      enabled: editing ? editing.enabled !== false : true,
+      url: draftUrl,
+      createdAt: editing ? editing.createdAt || Date.now() : Date.now(),
+      lat: draftCoord ? draftCoord.lat : null,
+      lng: draftCoord ? draftCoord.lng : null,
+    };
+    $("save-btn").disabled = true;
+    try {
+      await store.put(place);
+      closeSheet();
+    } catch (err) {
+      $("parsed").hidden = false;
+      $("parsed").classList.add("warn");
+      $("parsed").textContent = "Couldn't save. Check your connection and try again.";
+    } finally {
+      $("save-btn").disabled = false;
+    }
+  });
+
+  $("q").addEventListener("input", render);
+  $("loc-btn").onclick = startLocation;
+
+  // ---------- Boot ----------
+  store.loadLocal();
+  setLoc("off");
+  render();
+  store.connect();
+  try {
+    navigator.permissions && navigator.permissions.query({ name: "geolocation" })
+      .then((s) => { if (s.state === "granted") startLocation(); }).catch(() => {});
+  } catch {}
+})();
+</script>
+
+</body>
+</html>
