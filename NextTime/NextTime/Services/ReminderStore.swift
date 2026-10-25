@@ -5,6 +5,9 @@ import Observation
 @MainActor
 @Observable
 final class ReminderStore {
+    /// The one store for the app and its Siri intent. Two instances would overwrite each other's saves.
+    static let shared = ReminderStore()
+
     private(set) var reminders: [PlaceReminder] = []
 
     private let fileURL: URL

@@ -118,6 +118,9 @@ private struct EmptyStateView: View {
         } actions: {
             Button("Add your first reminder", action: add)
                 .buttonStyle(.borderedProminent)
+            Text("Or just tell Siri: “Add a Next Time note”")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
     }
 }

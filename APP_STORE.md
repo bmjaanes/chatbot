@@ -93,6 +93,7 @@ In App Store Connect, open the app, then version **1.0**:
   > Leave yourself a note for any place, like "Don't get the fish, the burger was great". The next time you arrive, your iPhone shows it to you.
   >
   > • Save the place you're at right now with one tap
+  > • Hands full? Just say "Hey Siri, add a Next Time note"
   > • Search for any restaurant, shop or address
   > • Paste a place straight from Google Maps
   > • Get reminded every time you return, not just once
@@ -100,14 +101,14 @@ In App Store Connect, open the app, then version **1.0**:
   >
   > Private by design: your notes stay on your iPhone. No account, no ads, no tracking. iOS handles the arrival alerts itself, so Next Time only needs location access while you're using it and has almost no effect on battery.
 
-- **Keywords**: `restaurant,notes,reminder,location,places,food,order,memory,geofence,google maps,diary,dining`
+- **Keywords**: `restaurant,notes,reminder,location,places,food,order,memory,siri,google maps,diary,dining`
 - **Support URL**: `https://bmjaanes.github.io/chatbot/support.html`
 - **Marketing URL**: leave blank
 - **Version / Copyright**: `1.0` / `2026` followed by your name or company
 - **Build**: choose the build you uploaded.
 - **App Review Information**: no sign-in required. In **Notes**, paste:
 
-  > Next Time shows a note when the user arrives at a saved place. To test: tap +, choose Near Me, pick any place, write a note and save. Allow location and notifications. The notification is delivered by iOS (UNLocationNotificationTrigger) when the device enters the area around the place, so it appears after leaving and returning, or by simulating a location change. Places can also be added via Search or by pasting a Google Maps share link.
+  > Next Time shows a note when the user arrives at a saved place. To test: tap +, choose Near Me, pick any place, write a note and save. Allow location and notifications. The notification is delivered by iOS (UNLocationNotificationTrigger) when the device enters the area around the place, so it appears after leaving and returning, or by simulating a location change. Places can also be added via Search or by pasting a Google Maps share link. Siri: say "Add a Next Time note" (location access must be granted in the app first).
 
 ### 5. Fill in the app-level pages (once)
 - **App Privacy**: Privacy Policy URL `https://bmjaanes.github.io/chatbot/privacy.html`. Under Data Collection, choose **No, we do not collect data from this app**.

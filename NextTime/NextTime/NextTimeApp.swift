@@ -4,7 +4,8 @@ import UserNotifications
 @main
 struct NextTimeApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var store = ReminderStore()
+    // Shared with the Siri intent, so a note added by voice shows up immediately.
+    @State private var store = ReminderStore.shared
     @State private var location = LocationService()
 
     var body: some Scene {

@@ -14,6 +14,13 @@ Save *"Don't get the fish"* at a restaurant and the next time you walk in, your 
 
 From any saved reminder you can tap **Open in Google Maps** to jump back to the place.
 
+### Siri
+
+Say **"Hey Siri, add a Next Time note"** (or "Remember this place in Next Time"). Siri asks what to remember,
+then the note is saved for the business you're at. If there's no business within 60 m, it's saved for the street
+address. If you already have a note within 40 m, the new one is added to it. This also works from the Shortcuts app
+and the Action button. Location access has to be allowed in the app once first, because Siri can't show that prompt.
+
 ### Under the hood
 
 - **Geofencing is done by iOS**, using `UNLocationNotificationTrigger`. The app doesn't run in the background, doesn't track you, and only needs *"While Using the App"* location permission.
