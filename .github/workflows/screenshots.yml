@@ -67,7 +67,7 @@ jobs:
             xcrun simctl ui "$UDID" appearance "$appearance"
             for screen in list detail add; do
               xcrun simctl launch "$UDID" "$BUNDLE_ID" -screenshots -screen "$screen"
-              sleep 8
+              sleep 15
               xcrun simctl io "$UDID" screenshot "screenshots/$n-$screen-$appearance.png"
               xcrun simctl terminate "$UDID" "$BUNDLE_ID" || true
               n=$((n + 1))
