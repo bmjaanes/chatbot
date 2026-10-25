@@ -10,6 +10,35 @@ struct RemindersListView: View {
     @State private var path: [UUID] = []
     @State private var isAdding = false
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
+    @State private var sort: SortOrder = .newest
+    @State private var filter: RatingFilter = .all
+
+    enum SortOrder: String, CaseIterable, Identifiable {
+        case newest = "Newest", rating = "Highest Rated", name = "Name"
+        var id: Self { self }
+    }
+
+    enum RatingFilter: String, CaseIterable, Identifiable {
+        case all = "All Places", loved = "Loved (4–5 ★)", neverAgain = "Never Again (1–2 ★)"
+        var id: Self { self }
+
+        func includes(_ reminder: PlaceReminder) -> Bool {
+            switch self {
+            case .all: true
+            case .loved: (reminder.rating ?? 0) >= 4
+            case .neverAgain: (1...2).contains(reminder.rating ?? 0)
+            }
+        }
+    }
+
+    private var visibleReminders: [PlaceReminder] {
+        let matching = store.reminders.filter(filter.includes)
+        switch sort {
+        case .newest: return matching.sorted { $0.createdAt > $1.createdAt }
+        case .rating: return matching.sorted { ($0.rating ?? 0, $0.createdAt) > ($1.rating ?? 0, $1.createdAt) }
+        case .name: return matching.sorted { $0.placeName.localizedCaseInsensitiveCompare($1.placeName) == .orderedAscending }
+        }
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -19,20 +48,44 @@ struct RemindersListView: View {
                                      notificationsDenied: notificationStatus == .denied)
                 }
 
-                ForEach(store.reminders) { reminder in
+                let visible = visibleReminders
+                ForEach(visible) { reminder in
                     NavigationLink(value: reminder.id) {
                         ReminderRow(reminder: reminder)
                     }
                 }
-                .onDelete { store.delete(atOffsets: $0) }
+                .onDelete { offsets in store.delete(ids: offsets.map { visible[$0].id }) }
             }
             .overlay {
                 if store.reminders.isEmpty {
                     EmptyStateView { isAdding = true }
+                } else if visibleReminders.isEmpty {
+                    ContentUnavailableView {
+                        Label("No places here yet", systemImage: "star")
+                    } description: {
+                        Text("Nothing you've saved matches \u{201C}\(filter.rawValue)\u{201D}.")
+                    } actions: {
+                        Button("Show All Places") { filter = .all }
+                    }
                 }
             }
             .navigationTitle("Next Time")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        Picker("Sort", selection: $sort) {
+                            ForEach(SortOrder.allCases) { Text($0.rawValue).tag($0) }
+                        }
+                        Picker("Show", selection: $filter) {
+                            ForEach(RatingFilter.allCases) { Text($0.rawValue).tag($0) }
+                        }
+                    } label: {
+                        Label("Sort and Filter", systemImage: filter == .all
+                              ? "line.3.horizontal.decrease.circle"
+                              : "line.3.horizontal.decrease.circle.fill")
+                    }
+                    .disabled(store.reminders.isEmpty)
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button { isAdding = true } label: {
                         Label("Add reminder", systemImage: "plus")
@@ -69,7 +122,8 @@ struct RemindersListView: View {
         }
         .task(id: scenePhase) {
             if scenePhase == .active {
-                store.reschedule()
+                // Places shared from Google Maps are written by the Share extension while the app is in the background.
+                store.reloadFromDisk()
                 notificationStatus = await NotificationScheduler.authorizationStatus()
             }
         }
@@ -86,16 +140,34 @@ private struct ReminderRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "mappin.circle.fill")
-                .font(.title2)
-                .foregroundStyle(reminder.isEnabled ? Color.accentColor : .secondary)
-            VStack(alignment: .leading, spacing: 4) {
+            if let photo = reminder.photos.first {
+                PhotoThumbnail(name: photo, side: 44)
+                    .frame(width: 44, height: 44)
+                    .opacity(reminder.isEnabled ? 1 : 0.5)
+            } else {
+                Image(systemName: "mappin.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(reminder.isEnabled ? Color.accentColor : .secondary)
+                    .frame(width: 44)
+            }
+            VStack(alignment: .leading, spacing: 3) {
                 Text(reminder.placeName)
                     .font(.headline)
-                Text(reminder.note)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                if let rating = reminder.rating {
+                    StarsLabel(rating: rating)
+                }
+                if !reminder.note.isEmpty {
+                    Text(reminder.note)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                if let dishes = reminder.dishSummary {
+                    Text(dishes)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
             Spacer(minLength: 0)
             Toggle("Enabled", isOn: Binding(
@@ -118,7 +190,8 @@ private struct EmptyStateView: View {
         } actions: {
             Button("Add your first reminder", action: add)
                 .buttonStyle(.borderedProminent)
-            Text("Or just tell Siri: “Add a Next Time note”")
+            Text("You can also share a place from Google Maps, or tell Siri: “Add a Next Time note”")
+                .multilineTextAlignment(.center)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

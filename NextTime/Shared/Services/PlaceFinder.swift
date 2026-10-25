@@ -46,6 +46,20 @@ enum PlaceFinder {
         return (placemark.name, PlaceCandidate.address(from: placemark))
     }
 
+    /// The business you're most likely at (within `radius`), or the street address if there isn't one.
+    static func placeAt(_ location: CLLocation, radius: CLLocationDistance = 60) async -> PlaceCandidate {
+        if let nearest = try? await pointsOfInterest(near: location, radius: radius).first,
+           CLLocation(latitude: nearest.latitude, longitude: nearest.longitude).distance(from: location) <= radius {
+            return nearest
+        }
+        let described = await describe(location.coordinate)
+        return PlaceCandidate(
+            name: described.name ?? "Saved spot",
+            address: described.address,
+            latitude: location.coordinate.latitude,
+            longitude: location.coordinate.longitude)
+    }
+
     private static func distance(_ item: MKMapItem, _ location: CLLocation) -> CLLocationDistance {
         let c = item.placemark.coordinate
         return CLLocation(latitude: c.latitude, longitude: c.longitude).distance(from: location)

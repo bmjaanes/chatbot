@@ -48,7 +48,9 @@ enum NotificationScheduler {
         for reminder in wanted.values where !upToDate.contains(reminder.id.uuidString) {
             let content = UNMutableNotificationContent()
             content.title = "Back at \(reminder.placeName)"
-            content.body = reminder.note
+            if let rating = reminder.rating { content.subtitle = StarRating.text(rating) }
+            content.body = [reminder.note, reminder.dishSummary]
+                .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n")
             content.sound = .default
             content.threadIdentifier = reminder.id.uuidString
             content.userInfo = [signatureKey: signature(of: reminder)]
@@ -75,6 +77,6 @@ enum NotificationScheduler {
     private static let signatureKey = "signature"
 
     private static func signature(of reminder: PlaceReminder) -> String {
-        "\(reminder.latitude)|\(reminder.longitude)|\(reminder.radius)|\(reminder.placeName)|\(reminder.note)"
+        "\(reminder.latitude)|\(reminder.longitude)|\(reminder.radius)|\(reminder.placeName)|\(reminder.note)|\(reminder.rating ?? 0)|\(reminder.dishSummary ?? "")"
     }
 }

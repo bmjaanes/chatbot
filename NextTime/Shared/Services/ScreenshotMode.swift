@@ -15,7 +15,7 @@ enum ScreenshotMode {
     static var sampleReminders: [PlaceReminder] {
         let samples: [(String, String, Double, Double, String)] = [
             ("Harbor Fish House", "1120 SW Front Ave, Portland", 45.5150, -122.6745,
-             "Don't get the fish. The burger was great, ask for extra pickles."),
+             "Ask for a booth by the window. Extra pickles on the burger."),
             ("Luna Taqueria", "3510 SE Division St, Portland", 45.5049, -122.6283,
              "Al pastor tacos + horchata. Skip the nachos."),
             ("Copper Kettle Café", "720 NW 23rd Ave, Portland", 45.5275, -122.6985,
@@ -28,6 +28,13 @@ enum ScreenshotMode {
                 name: sample.0, address: sample.1, latitude: sample.2, longitude: sample.3))
             reminder.note = sample.4
             reminder.isEnabled = index != 3
+            reminder.rating = [2, 5, 4, nil][index]
+            reminder.dishes = index == 0
+                ? [DishNote(name: "Fish & chips", verdict: .bad), DishNote(name: "Smash burger", verdict: .good),
+                   DishNote(name: "Garlic fries", verdict: .good)]
+                : index == 1 ? [DishNote(name: "Al pastor", verdict: .good)] : []
+            // Spread out so "Newest" keeps this order.
+            reminder.createdAt = Date().addingTimeInterval(-Double(index) * 86_400)
             return reminder
         }
     }

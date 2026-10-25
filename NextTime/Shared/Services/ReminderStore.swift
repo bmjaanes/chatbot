@@ -24,7 +24,26 @@ final class ReminderStore {
     }
 
     nonisolated static var defaultFileURL: URL {
-        URL.applicationSupportDirectory.appending(path: "reminders.json")
+        let url = AppGroup.containerURL.appending(path: "reminders.json")
+        // Versions before the Share extension kept reminders in the app's own folder.
+        let legacy = URL.applicationSupportDirectory.appending(path: "reminders.json")
+        if legacy != url, !FileManager.default.fileExists(atPath: url.path),
+           FileManager.default.fileExists(atPath: legacy.path) {
+            try? FileManager.default.moveItem(at: legacy, to: url)
+        }
+        return url
+    }
+
+    /// Picks up places the Share extension saved while the app was in the background.
+    func reloadFromDisk() {
+        guard !ScreenshotMode.isOn else { return }
+        load()
+        reschedule()
+    }
+
+    /// Waits for pending notification scheduling, for the Share extension before it closes.
+    func finishScheduling() async {
+        await syncTask?.value
     }
 
     func reminder(id: UUID) -> PlaceReminder? {
@@ -48,14 +67,15 @@ final class ReminderStore {
     }
 
     func delete(id: UUID) {
+        PhotoStore.delete(reminders.filter { $0.id == id }.flatMap(\.photos))
         reminders.removeAll { $0.id == id }
         changed()
     }
 
-    func delete(atOffsets offsets: IndexSet) {
-        for index in offsets.sorted(by: >) {
-            reminders.remove(at: index)
-        }
+    func delete(ids: [UUID]) {
+        let doomed = Set(ids)
+        PhotoStore.delete(reminders.filter { doomed.contains($0.id) }.flatMap(\.photos))
+        reminders.removeAll { doomed.contains($0.id) }
         changed()
     }
 

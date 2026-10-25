@@ -45,26 +45,11 @@ struct AddNoteHereIntent: AppIntent {
             return .result(dialog: "Added to your note for \(existing.placeName).")
         }
 
-        let place = await Self.placeAt(here)
+        let place = await PlaceFinder.placeAt(here, radius: Self.placeSearchRadius)
         var reminder = PlaceReminder(place: place)
         reminder.note = text
         store.save(reminder)
         return .result(dialog: "Saved for \(place.name). I'll remind you next time you're here.")
-    }
-
-    /// The business you're most likely at, or the street address if there isn't one close by.
-    @MainActor
-    private static func placeAt(_ location: CLLocation) async -> PlaceCandidate {
-        if let nearest = try? await PlaceFinder.pointsOfInterest(near: location, radius: placeSearchRadius).first,
-           CLLocation(latitude: nearest.latitude, longitude: nearest.longitude).distance(from: location) <= placeSearchRadius {
-            return nearest
-        }
-        let described = await PlaceFinder.describe(location.coordinate)
-        return PlaceCandidate(
-            name: described.name ?? "Saved spot",
-            address: described.address,
-            latitude: location.coordinate.latitude,
-            longitude: location.coordinate.longitude)
     }
 }
 
@@ -81,5 +66,14 @@ struct NextTimeShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Note for Here",
             systemImageName: "mappin.and.ellipse")
+        AppShortcut(
+            intent: RatePlaceIntent(),
+            phrases: [
+                "Rate this place \(\.$rating) in \(.applicationName)",
+                "Give this place \(\.$rating) in \(.applicationName)",
+                "Rate this place in \(.applicationName)",
+            ],
+            shortTitle: "Rate This Place",
+            systemImageName: "star")
     }
 }
