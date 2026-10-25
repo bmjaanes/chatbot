@@ -11,7 +11,7 @@ enum PlaceFinder {
         let response = try await MKLocalSearch(request: request).start()
         return response.mapItems
             .sorted { distance($0, location) < distance($1, location) }
-            .map(PlaceCandidate.init(mapItem:))
+            .map { PlaceCandidate(mapItem: $0) }
     }
 
     /// Free-text search ("Joe's Fish Shack Portland"), biased toward a location when given.
@@ -21,12 +21,12 @@ enum PlaceFinder {
         if let location {
             request.region = MKCoordinateRegion(center: location.coordinate, latitudinalMeters: 50_000, longitudinalMeters: 50_000)
         }
-        return try await MKLocalSearch(request: request).start().mapItems.map(PlaceCandidate.init(mapItem:))
+        return try await MKLocalSearch(request: request).start().mapItems.map { PlaceCandidate(mapItem: $0) }
     }
 
     static func resolve(_ completion: MKLocalSearchCompletion) async throws -> PlaceCandidate? {
         let request = MKLocalSearch.Request(completion: completion)
-        return try await MKLocalSearch(request: request).start().mapItems.first.map(PlaceCandidate.init(mapItem:))
+        return try await MKLocalSearch(request: request).start().mapItems.first.map { PlaceCandidate(mapItem: $0) }
     }
 
     /// A human-readable name and address for a bare coordinate.

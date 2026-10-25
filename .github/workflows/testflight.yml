@@ -15,10 +15,8 @@ jobs:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      KEY_PATH: ${{ runner.temp }}/AuthKey.p8
-      ARCHIVE_PATH: ${{ runner.temp }}/NextTime.xcarchive
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: maxim-lobanov/setup-xcode@v1
         with:
@@ -26,6 +24,8 @@ jobs:
 
       - name: Check secrets
         run: |
+          echo "KEY_PATH=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+          echo "ARCHIVE_PATH=$RUNNER_TEMP/NextTime.xcarchive" >> "$GITHUB_ENV"
           for name in ASC_KEY_ID ASC_ISSUER_ID APPLE_TEAM_ID; do
             if [ -z "${!name}" ]; then echo "::error::Missing repository secret $name (see APP_STORE.md)"; exit 1; fi
           done

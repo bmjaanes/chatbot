@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Next Time Support</title>
+<style>
+:root { --bg:#eef2ef; --ink:#1b2a28; --muted:#5d6f6b; --teal:#23705f; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root { --bg:#111816; --ink:#e5ece9; --muted:#95a8a3; --teal:#5fb7a2; color-scheme: dark; } }
+body { margin:0; background:var(--bg); color:var(--ink); font:17px/1.55 -apple-system, system-ui, sans-serif;
+  padding-block: 32px 48px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width: 640px; margin: 0 auto; }
+h1 { font-size: 2rem; margin: 0 0 4px; line-height: 1.1; }
+h2 { font-size: 1.15rem; margin: 28px 0 6px; }
+p, li { color: var(--ink); } .muted { color: var(--muted); }
+a { color: var(--teal); }
+</style>
+</head>
+<body>
+<main>
+<h1>Next Time Support</h1>
+<p class="muted">Notes to yourself for the next time you're somewhere.</p>
+
+<h2>I'm not getting reminders</h2>
+<ul>
+  <li>Open <b>Settings → Next Time</b> and make sure <b>Location</b> is set to <b>While Using the App</b> (or Always) and <b>Notifications</b> are allowed.</li>
+  <li>Check that the reminder's switch is on in the app.</li>
+  <li>If you saved the reminder while standing at the place, iOS usually waits until you leave and come back before it reminds you.</li>
+  <li>Reminders work best with a radius of 150 m or more. Very small areas are less reliable.</li>
+</ul>
+
+<h2>How do I add a place from Google Maps?</h2>
+<p>In Google Maps, open the place, tap <b>Share</b>, then <b>Copy</b>. In Next Time, tap <b>+</b>, choose <b>Google Maps</b>, and tap <b>Paste</b>.</p>
+
+<h2>Is there a limit?</h2>
+<p>iOS lets an app watch up to 64 places at a time. You can save more; turn some off to make room.</p>
+
+<h2>Contact</h2>
+<p>Report a problem or request a feature by opening an issue at <a href="https://github.com/bmjaanes/chatbot/issues">github.com/bmjaanes/chatbot/issues</a>.</p>
+
+<p><a href="privacy.html">Privacy Policy</a></p>
+
+</main>
+</body>
+</html>
