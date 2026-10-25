@@ -1,0 +1,36 @@
+name: iOS build
+
+# Compiles the app for the iOS Simulator on every change, so build errors
+# show up here instead of on someone's Mac. No Apple account needed.
+on:
+  push:
+    paths:
+      - "NextTime/**"
+      - ".github/workflows/ios-build.yml"
+  pull_request:
+    paths:
+      - "NextTime/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Build for iOS Simulator
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project NextTime/NextTime.xcodeproj \
+            -scheme NextTime \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build | tee build.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" build.log
