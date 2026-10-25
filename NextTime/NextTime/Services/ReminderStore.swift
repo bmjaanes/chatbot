@@ -12,6 +12,10 @@ final class ReminderStore {
 
     init(fileURL: URL = ReminderStore.defaultFileURL) {
         self.fileURL = fileURL
+        if ScreenshotMode.isOn {
+            reminders = ScreenshotMode.sampleReminders
+            return
+        }
         load()
         reschedule()
     }
@@ -55,6 +59,7 @@ final class ReminderStore {
     // MARK: - Persistence
 
     private func changed() {
+        guard !ScreenshotMode.isOn else { return }
         persist()
         reschedule()
     }
@@ -81,6 +86,7 @@ final class ReminderStore {
     /// Re-registers notifications. Runs one at a time so an older snapshot never overwrites a newer one.
     /// Cheap to call: unchanged reminders are left alone.
     func reschedule() {
+        guard !ScreenshotMode.isOn else { return }
         let snapshot = reminders
         let previous = syncTask
         syncTask = Task {

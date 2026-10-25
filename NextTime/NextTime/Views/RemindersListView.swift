@@ -60,6 +60,13 @@ struct RemindersListView: View {
             // Location-triggered notifications can only be scheduled once location access is granted.
             store.reschedule()
         }
+        .onAppear {
+            switch ScreenshotMode.screen {
+            case "detail": path = store.reminders.first.map { [$0.id] } ?? []
+            case "add": isAdding = true
+            default: break
+            }
+        }
         .task(id: scenePhase) {
             if scenePhase == .active {
                 store.reschedule()

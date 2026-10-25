@@ -20,13 +20,17 @@ From any saved reminder you can tap **Open in Google Maps** to jump back to the 
 - **All data stays on the phone** (a JSON file in Application Support). No accounts, no servers.
 - **Google Maps links are parsed locally** (`GoogleMapsLinkParser.swift`). The parser prefers the place's exact pin (`!3d…!4d…`) over where the map happened to be centered (`@lat,lng`). If a link has no coordinates, the place is looked up by name with Apple Maps.
 
+## Publishing to the App Store
+
+See [`APP_STORE.md`](../APP_STORE.md): builds, signing, screenshots and upload all run on GitHub Actions, so no Mac is required.
+
 ## Running it
 
 Requirements: a Mac with **Xcode 16 or newer**, and an iPhone on **iOS 17 or newer**.
 
 1. Open `NextTime/NextTime.xcodeproj` in Xcode.
 2. Select the **NextTime** target, open **Signing & Capabilities**, and pick your **Team** (a free Apple ID works for running on your own phone).
-   If Xcode complains about the bundle ID, change `com.example.NextTime` to something unique, like `com.yourname.NextTime`.
+   If Xcode complains about the bundle ID, change `com.bmjaanes.nexttime` to something unique.
 3. Plug in your iPhone, select it as the run destination, and press **⌘R**.
 4. On the phone, allow **Location (While Using)** and **Notifications** when asked.
 

@@ -1,0 +1,78 @@
+name: App Store screenshots
+
+# Runs the app in the iPhone simulator with sample places and saves
+# 6.9-inch screenshots (the size App Store Connect asks for) as a
+# downloadable artifact. Run it from the Actions tab.
+on:
+  workflow_dispatch:
+
+jobs:
+  screenshots:
+    runs-on: macos-26
+    timeout-minutes: 40
+    env:
+      BUNDLE_ID: com.bmjaanes.nexttime
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Pick a 6.9-inch iPhone simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          ios = sorted(k for k in devices if "iOS" in k)
+          for runtime in reversed(ios):
+              for d in devices[runtime]:
+                  if d["name"].endswith("Pro Max"):
+                      print(d["udid"]); sys.exit()
+          ')
+          if [ -z "$UDID" ]; then echo "::error::No Pro Max simulator found"; xcrun simctl list devices available; exit 1; fi
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl list devices | grep "$UDID"
+
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project NextTime/NextTime.xcodeproj \
+            -scheme NextTime \
+            -configuration Debug \
+            -destination "id=$UDID" \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build | grep -E "error:|BUILD (SUCCEEDED|FAILED)"
+
+      - name: Prepare simulator
+        run: |
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
+          xcrun simctl install "$UDID" build/Build/Products/Debug-iphonesimulator/NextTime.app
+          xcrun simctl privacy "$UDID" grant location "$BUNDLE_ID"
+          xcrun simctl location "$UDID" set 45.5152,-122.6784
+
+      - name: Take screenshots
+        run: |
+          mkdir -p screenshots
+          n=1
+          for appearance in light dark; do
+            xcrun simctl ui "$UDID" appearance "$appearance"
+            for screen in list detail add; do
+              xcrun simctl launch "$UDID" "$BUNDLE_ID" -screenshots -screen "$screen"
+              sleep 8
+              xcrun simctl io "$UDID" screenshot "screenshots/$n-$screen-$appearance.png"
+              xcrun simctl terminate "$UDID" "$BUNDLE_ID" || true
+              n=$((n + 1))
+            done
+          done
+          ls -la screenshots
+          sips -g pixelWidth -g pixelHeight screenshots/1-list-light.png
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-store-screenshots
+          path: screenshots/
