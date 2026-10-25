@@ -127,12 +127,15 @@ private struct SearchPlacesView: View {
                 Task { await select(result) }
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(result.title).foregroundStyle(.primary)
+                    Text(result.title)
                     if !result.subtitle.isEmpty {
                         Text(result.subtitle).font(.caption).foregroundStyle(.secondary)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
         }
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Restaurant, shop, address…")
         .onChange(of: query) { _, newValue in
@@ -236,12 +239,16 @@ private struct PlaceRow: View {
                     .foregroundStyle(Color.accentColor)
                     .frame(width: 24)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(place.name).foregroundStyle(.primary)
+                    Text(place.name)
                     if let address = place.address {
                         Text(address).font(.caption).foregroundStyle(.secondary)
                     }
                 }
+                Spacer(minLength: 0)
             }
+            .contentShape(Rectangle())
         }
+        // The default list button style tints the whole label with the accent color.
+        .buttonStyle(.plain)
     }
 }

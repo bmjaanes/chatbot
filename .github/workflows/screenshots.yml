@@ -57,7 +57,7 @@ jobs:
           xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
           xcrun simctl install "$UDID" build/Build/Products/Debug-iphonesimulator/NextTime.app
           xcrun simctl privacy "$UDID" grant location "$BUNDLE_ID"
-          xcrun simctl location "$UDID" set 45.5152,-122.6784
+          xcrun simctl location "$UDID" set 45.5232,-122.6985
 
       - name: Take screenshots
         run: |

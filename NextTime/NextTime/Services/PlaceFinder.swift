@@ -8,11 +8,19 @@ enum PlaceFinder {
     /// Restaurants, shops, etc. around a location, closest first.
     static func pointsOfInterest(near location: CLLocation, radius: CLLocationDistance = 300) async throws -> [PlaceCandidate] {
         let request = MKLocalPointsOfInterestRequest(center: location.coordinate, radius: radius)
+        request.pointOfInterestFilter = MKPointOfInterestFilter(including: worthRemembering)
         let response = try await MKLocalSearch(request: request).start()
         return response.mapItems
             .sorted { distance($0, location) < distance($1, location) }
             .map { PlaceCandidate(mapItem: $0) }
     }
+
+    /// Places people go back to. Leaves out restrooms, fountains, transit stops, offices and the like.
+    private static let worthRemembering: [MKPointOfInterestCategory] = [
+        .restaurant, .cafe, .bakery, .brewery, .winery, .nightlife, .foodMarket, .store,
+        .hotel, .museum, .theater, .movieTheater, .fitnessCenter, .park, .beach,
+        .amusementPark, .zoo, .aquarium, .library, .stadium, .pharmacy,
+    ]
 
     /// Free-text search ("Joe's Fish Shack Portland"), biased toward a location when given.
     static func search(_ query: String, near location: CLLocation?) async throws -> [PlaceCandidate] {
