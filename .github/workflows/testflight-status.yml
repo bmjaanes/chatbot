@@ -1,0 +1,21 @@
+name: TestFlight status
+
+# Asks App Store Connect what happened to the latest uploads: still processing,
+# ready to test, or rejected. Apple only emails the uploader, which for these
+# builds is the API key, so this is the way to check. Runs on Linux, so it's cheap.
+on:
+  workflow_dispatch:
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - run: pip install --quiet "pyjwt[crypto]"
+      - name: Check builds
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: python3 .github/scripts/testflight_status.py
