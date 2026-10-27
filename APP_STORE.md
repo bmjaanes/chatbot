@@ -102,8 +102,8 @@ Don't add friends as *internal* testers: that makes them users on your App Store
 
 **Once:**
 1. In App Store Connect, open the app, then **TestFlight → Test Information** (left sidebar), and fill in:
-   - **Beta App Description**: Leave a note for the next time you're somewhere. Rate places, mark dishes 👍/👎, add
-     photos, and get reminded when you come back. Share places from Google Maps.
+   - **Beta App Description**: Leave a note for the next time you're somewhere. Rate places, mark dishes thumbs up or down,
+     add photos, and get reminded when you come back. Share places from Google Maps.
    - **Feedback Email**: your email address
    - **Privacy Policy URL**: `https://bmjaanes.github.io/chatbot/privacy.html`
    - **Beta App Review Information**: your name, phone and email. Leave "Sign-in required" unchecked; the app has no login.
@@ -141,7 +141,7 @@ In App Store Connect, open the app, then version **1.0**:
   Never order the wrong thing twice. Leave stars, notes and photos for any place, and Next Time reminds you the moment you walk back in.
   ```
 
-- **Description** (plain text, paste as is):
+- **Description** (plain text, paste as is; App Store Connect rejects emoji here):
 
   ```
   Ever walk into a restaurant and think, "What did I order last time, and was it any good?" Next Time remembers for you.
@@ -150,7 +150,7 @@ In App Store Connect, open the app, then version **1.0**:
 
   REMEMBER WHAT MATTERS
   • Rate places from 1 to 5 stars
-  • Mark each dish 👍 to get again or 👎 to skip
+  • Mark each dish thumbs up to order again, or thumbs down to skip it
   • Snap the menu, your plate, or the receipt, or add screenshots from your photo library
   • Write anything else you want to know next time: the best table, the parking trick, who to ask for
 
