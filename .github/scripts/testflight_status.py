@@ -26,6 +26,28 @@ EXPLAIN = {
     "EXPIRED": "Expired (TestFlight builds last 90 days). Upload a new one.",
 }
 
+EXTERNAL = {
+    "READY_FOR_BETA_SUBMISSION": "not sent to external testers",
+    "WAITING_FOR_BETA_REVIEW": "waiting for Beta App Review",
+    "IN_BETA_REVIEW": "in Beta App Review now",
+    "BETA_REJECTED": "rejected by Beta App Review (see App Store Connect for the reason)",
+    "BETA_APPROVED": "approved; add it to an external group to send it",
+    "IN_BETA_TESTING": "available to external testers",
+    "MISSING_EXPORT_COMPLIANCE": "waiting on the encryption question",
+    "EXPIRED": "expired",
+}
+
+
+def ago(iso):
+    """'3 h 20 min ago' for an App Store Connect timestamp."""
+    from datetime import datetime, timezone
+    then = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    minutes = int((datetime.now(timezone.utc) - then).total_seconds() // 60)
+    days, rest = divmod(minutes, 1440)
+    hours, mins = divmod(rest, 60)
+    parts = ([f"{days} d"] if days else []) + ([f"{hours} h"] if hours else []) + ([f"{mins} min"] if not days else [])
+    return " ".join(parts or ["0 min"]) + " ago"
+
 
 def token():
     now = int(time.time())
@@ -59,11 +81,13 @@ builds = get("builds", {
     "filter[app]": app["id"],
     "sort": "-uploadedDate",
     "limit": 5,
-    "include": "buildBetaDetail",
-    "fields[builds]": "version,processingState,uploadedDate,expired,buildBetaDetail",
-    "fields[buildBetaDetails]": "internalBuildState",
+    "include": "buildBetaDetail,betaAppReviewSubmission",
+    "fields[builds]": "version,processingState,uploadedDate,expired,buildBetaDetail,betaAppReviewSubmission",
+    "fields[buildBetaDetails]": "internalBuildState,externalBuildState",
+    "fields[betaAppReviewSubmissions]": "betaReviewState,submittedDate",
 })
 details = {d["id"]: d["attributes"] for d in builds.get("included", []) if d["type"] == "buildBetaDetails"}
+reviews = {d["id"]: d["attributes"] for d in builds.get("included", []) if d["type"] == "betaAppReviewSubmissions"}
 if not builds["data"]:
     print("No builds yet. Apple can take a few minutes after an upload before a build appears; if it never does, "
           "it was rejected during processing and Apple emailed the account holder.")
@@ -72,10 +96,17 @@ if not builds["data"]:
 lines = []
 for b in builds["data"]:
     a = b["attributes"]
-    rel = (b.get("relationships", {}).get("buildBetaDetail") or {}).get("data") or {}
-    beta = details.get(rel.get("id"), {}).get("internalBuildState")
+    rels = b.get("relationships", {})
+    detail = details.get(((rels.get("buildBetaDetail") or {}).get("data") or {}).get("id"), {})
+    review = reviews.get(((rels.get("betaAppReviewSubmission") or {}).get("data") or {}).get("id"), {})
+    beta = detail.get("internalBuildState")
     state = "EXPIRED" if a.get("expired") else (beta if a["processingState"] == "VALID" and beta else a["processingState"])
     line = f"Build 1.0 ({a['version']}) uploaded {a['uploadedDate'][:16].replace('T', ' ')} UTC: {state}\n    {EXPLAIN.get(state, '')}"
+    external = detail.get("externalBuildState")
+    if external:
+        line += f"\n    Friends (external testers): {EXTERNAL.get(external, external)}"
+    if review.get("submittedDate"):
+        line += f"\n    Sent to Beta App Review {review['submittedDate'][:16].replace('T', ' ')} UTC ({ago(review['submittedDate'])})"
     print(line)
     lines.append(line)
 
