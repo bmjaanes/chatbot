@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { openDb } from './db.js';
+import { openControl, openDb, tenantStore } from './db.js';
 
 const PUBLIC = join(fileURLToPath(new URL('.', import.meta.url)), 'public');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
@@ -28,6 +28,19 @@ const RESOURCES = {
   events: { required: ['date', 'title'], table: 'events', order: 'date DESC', fields: ['date', 'title', 'kind', 'attendance', 'group_id', 'notes'] },
 };
 
+const ALL = ['admin', 'pastor', 'treasurer', 'secretary', 'worship'];
+const ROLES = new Set(ALL);
+const PEOPLE = ['admin', 'pastor', 'secretary'], MONEY = ['admin', 'pastor', 'treasurer'], PAY = ['admin', 'treasurer'];
+// Who may read / write each area. Enforced on the server for every request.
+const ACCESS = {
+  members: { r: ALL, w: PEOPLE }, groups: { r: [...PEOPLE, 'worship'], w: PEOPLE },
+  hymns: { r: ALL, w: [...PEOPLE.slice(0, 2), 'worship'] }, services: { r: ALL, w: ['admin', 'pastor', 'worship'] },
+  funds: { r: MONEY, w: MONEY }, donations: { r: MONEY, w: MONEY }, expenses: { r: MONEY, w: MONEY }, budget: { r: MONEY, w: MONEY },
+  finance: { r: MONEY, w: MONEY }, staff: { r: PAY, w: PAY }, payroll: { r: PAY, w: PAY },
+  stats: { r: ALL, w: PEOPLE }, events: { r: ALL, w: PEOPLE },
+};
+const PASTORAL = PEOPLE; // roles that may see private member fields (notes)
+
 class HttpError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
 const col = (r, f) => (r.money?.includes(f) ? `${f}_cents` : f);
 const toCents = v => Math.round(Number(v) * 100);
@@ -51,23 +64,40 @@ function toValues(r, body, partial = false) {
   return { cols, vals };
 }
 
-export function createApp(db) {
-  const sessions = new Map();
+export function createApp({ control, tenant }) {
+  const sessions = new Map(); // token -> { userId, email, churchId, churchName, role }
+  const failures = new Map(); // email -> { n, until } : basic brute-force lockout
 
   const hashPw = (pw, salt) => scryptSync(pw, salt, 64).toString('hex');
-  const hasUsers = () => db.prepare('SELECT COUNT(*) n FROM users').get().n > 0;
-  function createUser(email, pw) {
-    if (!email || !pw || pw.length < 10) throw new HttpError(400, 'Email and a password of at least 10 characters are required');
+  function checkPw(pw) { if (typeof pw !== 'string' || pw.length < 10) throw new HttpError(400, 'Password must be at least 10 characters'); }
+  function newUser(email, pw) {
+    const e = String(email ?? '').trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) throw new HttpError(400, 'A valid email is required');
+    checkPw(pw);
     const salt = randomBytes(16).toString('hex');
-    db.prepare('INSERT INTO users (email, salt, hash) VALUES (?,?,?)').run(email.toLowerCase(), salt, hashPw(pw, salt));
+    return Number(control.prepare('INSERT INTO users (email, salt, hash) VALUES (?,?,?)').run(e, salt, hashPw(pw, salt)).lastInsertRowid);
+  }
+  const churchesOf = uid => control.prepare(`SELECT c.id, c.name, m.role FROM memberships m JOIN churches c ON c.id = m.church_id
+    WHERE m.user_id = ? ORDER BY c.name`).all(uid);
+  function startSession(user, churchId) {
+    const list = churchesOf(user.id);
+    const c = list.find(x => x.id === churchId) ?? list[0];
+    if (!c) throw new HttpError(403, 'This account does not belong to any church');
+    const token = randomBytes(32).toString('hex');
+    sessions.set(token, { userId: user.id, email: user.email, churchId: c.id, churchName: c.name, role: c.role });
+    return token;
   }
   function login(email, pw) {
-    const u = db.prepare('SELECT * FROM users WHERE email = ?').get(String(email ?? '').toLowerCase());
+    const e = String(email ?? '').trim().toLowerCase(), f = failures.get(e);
+    if (f?.until > Date.now()) throw new HttpError(429, 'Too many attempts. Try again in a few minutes.');
+    const u = control.prepare('SELECT * FROM users WHERE email = ?').get(e);
     const given = Buffer.from(hashPw(String(pw ?? ''), u?.salt ?? '00'), 'hex');
-    if (!u || !timingSafeEqual(given, Buffer.from(u.hash, 'hex'))) throw new HttpError(401, 'Invalid email or password');
-    const token = randomBytes(32).toString('hex');
-    sessions.set(token, u.id);
-    return token;
+    if (!u || !timingSafeEqual(given, Buffer.from(u.hash, 'hex'))) {
+      const n = (f?.n ?? 0) + 1; failures.set(e, { n, until: n >= 5 ? Date.now() + 15 * 60_000 : 0 });
+      throw new HttpError(401, 'Invalid email or password');
+    }
+    failures.delete(e);
+    return startSession(u);
   }
   const cookieOf = req => /(?:^|;\s*)sid=([a-f0-9]+)/.exec(req.headers.cookie ?? '')?.[1];
 
@@ -77,6 +107,7 @@ export function createApp(db) {
   }
 
   // ---- route handlers: return {json} | {csv, name} ----
+  const bind = db => {
   function crud(name, method, id, body) {
     const r = RESOURCES[name];
     if (method === 'GET' && !id) return db.prepare(`SELECT * FROM ${r.table} ORDER BY ${r.order}`).all().map(x => fromRow(r, x));
@@ -148,21 +179,84 @@ export function createApp(db) {
     return { year: Number(year), months, membership: Object.fromEntries(members.map(m => [m.status, m.n])) };
   }
 
+  return { crud, groupMembers, inTx, financeReport, statsReport };
+  };
+
   const csvCell = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const toCsv = rows => rows.map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+
+  function team(churchId) {
+    return control.prepare(`SELECT u.id, u.email, m.role FROM memberships m JOIN users u ON u.id = m.user_id WHERE m.church_id = ? ORDER BY u.email`).all(churchId);
+  }
 
   async function route(req, url, body) {
     const parts = url.pathname.split('/').filter(Boolean).slice(1); // drop "api"
     const [a, b, c] = parts, method = req.method, num = x => (x == null ? null : Number(x));
-    if (a === 'session') return { json: { authenticated: sessions.has(cookieOf(req)), needsSetup: !hasUsers() } };
-    if (a === 'setup' && method === 'POST') {
-      if (hasUsers()) throw new HttpError(403, 'Already set up');
-      createUser(body.email, body.password);
-      return { json: { ok: true }, cookie: login(body.email, body.password) };
+    const sess = sessions.get(cookieOf(req));
+    if (a === 'session') return { json: sess ? { authenticated: true, email: sess.email, church: sess.churchName, role: sess.role, churches: churchesOf(sess.userId) } : { authenticated: false } };
+    if (a === 'signup' && method === 'POST') { // registers a new church and its first admin
+      const name = String(body.church_name ?? '').trim();
+      if (!name) throw new HttpError(400, 'Church name is required');
+      const email = String(body.email ?? '').trim().toLowerCase();
+      if (control.prepare('SELECT 1 FROM users WHERE email = ?').get(email)) throw new HttpError(409, 'That email already has an account. Sign in, then ask to be added to your church.');
+      control.exec('BEGIN');
+      let user, cid;
+      try {
+        const uid = newUser(email, body.password);
+        cid = Number(control.prepare('INSERT INTO churches (name, conference, district) VALUES (?,?,?)').run(name, body.conference ?? '', body.district ?? '').lastInsertRowid);
+        control.prepare('INSERT INTO memberships (user_id, church_id, role) VALUES (?,?,?)').run(uid, cid, 'admin');
+        control.exec('COMMIT'); user = { id: uid, email };
+      } catch (e) { control.exec('ROLLBACK'); throw e; }
+      tenant(cid);
+      return { json: { ok: true }, cookie: startSession(user, cid) };
     }
     if (a === 'login' && method === 'POST') return { json: { ok: true }, cookie: login(body.email, body.password) };
     if (a === 'logout') { sessions.delete(cookieOf(req)); return { json: { ok: true }, cookie: '' }; }
-    if (!sessions.has(cookieOf(req))) throw new HttpError(401, 'Not signed in');
+    if (!sess) throw new HttpError(401, 'Not signed in');
+
+    if (a === 'switch-church' && method === 'POST') {
+      const token = startSession({ id: sess.userId, email: sess.email }, Number(body.church_id));
+      if (sessions.get(token).churchId !== Number(body.church_id)) { sessions.delete(token); throw new HttpError(403, 'Not a member of that church'); }
+      sessions.delete(cookieOf(req));
+      return { json: { ok: true }, cookie: token };
+    }
+    if (a === 'users') { // team management: admins only
+      if (sess.role !== 'admin') throw new HttpError(403, 'Only an admin can manage the team');
+      const adminCount = () => control.prepare("SELECT COUNT(*) n FROM memberships WHERE church_id = ? AND role = 'admin'").get(sess.churchId).n;
+      if (method === 'GET') return { json: team(sess.churchId) };
+      if (method === 'POST') {
+        if (!ROLES.has(body.role)) throw new HttpError(400, 'Unknown role');
+        const email = String(body.email ?? '').trim().toLowerCase();
+        let u = control.prepare('SELECT id FROM users WHERE email = ?').get(email);
+        const uid = u ? u.id : newUser(email, body.password); // new people get the temporary password the admin chose
+        control.prepare('INSERT OR REPLACE INTO memberships (user_id, church_id, role) VALUES (?,?,?)').run(uid, sess.churchId, body.role);
+        return { json: team(sess.churchId) };
+      }
+      const target = num(b);
+      if (method === 'PUT' || method === 'DELETE') {
+        const cur = control.prepare('SELECT role FROM memberships WHERE user_id = ? AND church_id = ?').get(target, sess.churchId);
+        if (!cur) throw new HttpError(404, 'Not found');
+        if (cur.role === 'admin' && adminCount() <= 1 && (method === 'DELETE' || body.role !== 'admin')) throw new HttpError(400, 'A church needs at least one admin');
+        if (method === 'DELETE') control.prepare('DELETE FROM memberships WHERE user_id = ? AND church_id = ?').run(target, sess.churchId);
+        else {
+          if (!ROLES.has(body.role)) throw new HttpError(400, 'Unknown role');
+          control.prepare('UPDATE memberships SET role = ? WHERE user_id = ? AND church_id = ?').run(body.role, target, sess.churchId);
+        }
+        return { json: team(sess.churchId) };
+      }
+      throw new HttpError(405, 'Method not allowed');
+    }
+
+    // ---- everything below is church data: pick the area, check the role, then use THIS church's database ----
+    const area = a === 'reports' ? (b === 'finance' ? 'finance' : 'stats')
+      : a === 'payroll-export' ? 'payroll' : a === 'members-export' ? 'members'
+      : a === 'members' && c === 'statement' ? 'finance' : a;
+    const rule = ACCESS[area];
+    if (!rule) throw new HttpError(404, 'Not found');
+    const writes = method !== 'GET' && !(a === 'groups' && c === 'emails');
+    if (!(writes ? rule.w : rule.r).includes(sess.role)) throw new HttpError(403, 'Your role does not allow this');
+    const db = tenant(sess.churchId);
+    const { crud, groupMembers, inTx, financeReport, statsReport } = bind(db);
 
     if (a === 'groups' && c === 'members') {
       const gid = num(b);
@@ -214,7 +308,11 @@ export function createApp(db) {
       return { name: 'members.csv', csv: toCsv([['First', 'Last', 'Email', 'Phone', 'Status', 'Roles', 'Joined', 'Baptized'],
         ...rows.map(r => [r.first_name, r.last_name, r.email, r.phone, r.status, r.roles, r.joined_date, r.baptized_date])]) };
     }
-    if (RESOURCES[a]) return { json: crud(a, method, num(b), body) };
+    if (RESOURCES[a]) {
+      const out = crud(a, method, num(b), body);
+      if (a === 'members' && !PASTORAL.includes(sess.role)) for (const m of [].concat(out)) { delete m.notes; delete m.birthdate; delete m.address; }
+      return { json: out };
+    }
     throw new HttpError(404, 'Not found');
   }
 
@@ -249,5 +347,5 @@ export function createApp(db) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const port = Number(process.env.PORT ?? 3000);
-  http.createServer(createApp(openDb(process.env.DB_PATH ?? 'data/church.db'))).listen(port, () => console.log(`Church Manager on http://localhost:${port}`));
+  http.createServer(createApp({ control: openControl(process.env.CONTROL_DB ?? 'data/control.db'), tenant: tenantStore(process.env.TENANT_DIR ?? 'data/churches') })).listen(port, () => console.log(`Church Manager on http://localhost:${port}`));
 }

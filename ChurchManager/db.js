@@ -2,6 +2,34 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
+// Each church gets its own SQLite file (data/churches/<id>.db): hard isolation between congregations.
+export function tenantStore(dir = 'data/churches') {
+  const cache = new Map();
+  return id => {
+    if (!Number.isInteger(id)) throw new Error('bad church id');
+    if (!cache.has(id)) cache.set(id, openDb(dir === ':memory:' ? ':memory:' : `${dir}/${id}.db`));
+    return cache.get(id);
+  };
+}
+
+// Central accounts database: churches, users, and which role each user holds in which church.
+export function openControl(path = 'data/control.db') {
+  if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
+  const db = new DatabaseSync(path);
+  db.exec(`PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;
+    CREATE TABLE IF NOT EXISTS churches (
+      id INTEGER PRIMARY KEY, name TEXT NOT NULL, conference TEXT DEFAULT '', district TEXT DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY, email TEXT UNIQUE NOT NULL, salt TEXT NOT NULL, hash TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS memberships (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      church_id INTEGER NOT NULL REFERENCES churches(id) ON DELETE CASCADE,
+      role TEXT NOT NULL CHECK (role IN ('admin','pastor','treasurer','secretary','worship')),
+      PRIMARY KEY (user_id, church_id));`);
+  return db;
+}
+
 export function openDb(path = 'data/church.db') {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
@@ -13,9 +41,6 @@ export function openDb(path = 'data/church.db') {
 
 // Money is always stored as integer cents (*_cents columns).
 const SCHEMA = `
-CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY, email TEXT UNIQUE NOT NULL, salt TEXT NOT NULL, hash TEXT NOT NULL
-);
 CREATE TABLE IF NOT EXISTS members (
   id INTEGER PRIMARY KEY,
   first_name TEXT NOT NULL, last_name TEXT NOT NULL,

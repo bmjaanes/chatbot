@@ -9,7 +9,7 @@ function h(tag, attrs = {}, ...kids) {
     else if (v === true) el.setAttribute(k, '');
     else if (v !== false && v != null) el.setAttribute(k, v);
   }
-  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : document.createTextNode(kid));
+  for (const kid of kids.flat(Infinity)) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : document.createTextNode(kid));
   return el;
 }
 
@@ -315,45 +315,87 @@ function statsReport() {
 
 async function dashboard() {
   const y = thisYear();
-  const [f, s] = await Promise.all([api('GET', `reports/finance?year=${y}`), api('GET', `reports/stats?year=${y}`)]);
-  const withData = s.months.filter(m => m.avgWorship != null);
-  const last = withData.at(-1);
+  const [f, st] = await Promise.all([api('GET', `reports/finance?year=${y}`).catch(() => null), api('GET', `reports/stats?year=${y}`)]);
+  const last = st.months.filter(m => m.avgWorship != null).at(-1);
   return h('div', {}, h('h2', {}, `${y} at a glance`),
     h('div', { class: 'tiles' },
-      tile('Active members', s.membership.active ?? 0),
+      tile('Active members', st.membership.active ?? 0),
       tile('Avg worship (latest month)', last ? last.avgWorship : '—'),
-      tile('Baptisms this year', s.months.reduce((a, m) => a + m.baptisms, 0)),
-      tile('Events this year', s.months.reduce((a, m) => a + m.events, 0)),
-      tile('Giving YTD', money(f.totalGiving)), tile('Spending YTD', money(f.totalSpending))));
+      tile('Baptisms this year', st.months.reduce((a, m) => a + m.baptisms, 0)),
+      tile('Events this year', st.months.reduce((a, m) => a + m.events, 0)),
+      f ? [tile('Giving YTD', money(f.totalGiving)), tile('Spending YTD', money(f.totalSpending))] : null));
 }
 
-const SECTIONS = [['Dashboard', dashboard], ['People', members], ['Worship', worship], ['Finance', giving], ['Payroll', payroll], ['Statistics', stats]];
+const ROLE_LABEL = { admin: 'Admin', pastor: 'Pastor', treasurer: 'Treasurer', secretary: 'Secretary', worship: 'Worship leader' };
 
-async function shell() {
-  const main = h('main'), nav = h('nav', {}, h('h1', {}, '⛪ Church Manager'));
+function team() {
+  const root = h('div'), err = h('div', { class: 'err' });
+  async function draw(list) {
+    list ??= await api('GET', 'users');
+    const roleSelect = (cur, onchange) => h('select', { onchange }, Object.entries(ROLE_LABEL).map(([v, l]) => h('option', { value: v, selected: v === cur }, l)));
+    const email = h('input', { type: 'email', required: true, placeholder: 'person@example.org' }), pw = h('input', { type: 'text', placeholder: 'Temporary password (new people only)', minlength: 10 });
+    const role = roleSelect('secretary');
+    root.replaceChildren(h('h2', {}, 'Team'),
+      h('p', { class: 'muted' }, 'Everyone who can sign in to this church. Admin: everything. Pastor: everything except team and payroll. Treasurer: finance and payroll. Secretary: people and statistics. Worship leader: services and hymns.'),
+      h('table', {}, h('thead', {}, h('tr', {}, ['Email', 'Role', ''].map(t => h('th', {}, t)))),
+        h('tbody', {}, list.map(u => h('tr', {}, h('td', {}, u.email),
+          h('td', {}, roleSelect(u.role, async e => { try { await draw(await api('PUT', `users/${u.id}`, { role: e.target.value })); } catch (ex) { err.textContent = ex.message; draw(); } })),
+          h('td', {}, h('button', { class: 'link', onclick: async () => { if (confirm(`Remove ${u.email} from this church?`)) try { await draw(await api('DELETE', `users/${u.id}`)); } catch (ex) { err.textContent = ex.message; } } }, 'Remove')))))),
+      h('form', { class: 'card', style: 'margin-top:16px', onsubmit: async e => {
+        e.preventDefault(); err.textContent = '';
+        try { await draw(await api('POST', 'users', { email: email.value, password: pw.value || undefined, role: role.value })); } catch (ex) { err.textContent = ex.message; }
+      } }, h('h3', { style: 'margin-top:0' }, 'Add someone'), h('div', { class: 'grid' }, h('div', {}, h('label', {}, 'Email'), email), h('div', {}, h('label', {}, 'Password'), pw), h('div', {}, h('label', {}, 'Role'), role)),
+      err, h('button', { class: 'btn', type: 'submit' }, 'Add to team')));
+  }
+  draw();
+  return root;
+}
+
+const ALL_ROLES = Object.keys(ROLE_LABEL);
+const SECTIONS = [['Dashboard', dashboard, ALL_ROLES], ['People', members, ['admin', 'pastor', 'secretary', 'worship']], ['Worship', worship, ALL_ROLES],
+  ['Finance', giving, ['admin', 'pastor', 'treasurer']], ['Payroll', payroll, ['admin', 'treasurer']], ['Statistics', stats, ALL_ROLES], ['Team', team, ['admin']]];
+
+async function shell(session) {
+  session ??= await api('GET', 'session');
+  const visible = SECTIONS.filter(x => x[2].includes(session.role));
+  const main = h('main'), nav = h('nav', {}, h('h1', {}, '⛪ Church Manager'), h('div', { class: 'muted', style: 'margin:-8px 8px 12px' }, session.church, ' · ', ROLE_LABEL[session.role]));
+  if (session.churches.length > 1) nav.append(h('select', { style: 'margin-bottom:12px', onchange: async e => { await api('POST', 'switch-church', { church_id: Number(e.target.value) }); shell(); } },
+    session.churches.map(c => h('option', { value: c.id, selected: c.name === session.church }, c.name))));
   const go = async i => {
     [...nav.querySelectorAll('button')].forEach((b, j) => b.classList.toggle('on', i === j));
-    try { main.replaceChildren(await SECTIONS[i][1]()); } catch (e) { main.replaceChildren(h('p', { class: 'err' }, e.message)); }
+    try { main.replaceChildren(await visible[i][1]()); } catch (e) { main.replaceChildren(h('p', { class: 'err' }, e.message)); }
   };
-  SECTIONS.forEach(([name], i) => nav.append(h('button', { onclick: () => go(i) }, name)));
+  visible.forEach(([name], i) => nav.append(h('button', { onclick: () => go(i) }, name)));
   nav.append(h('button', { onclick: async () => { await api('POST', 'logout'); boot(); } }, 'Sign out'));
   $app.replaceChildren(h('div', { class: 'shell' }, nav, main));
   go(0);
 }
 
-function loginView(needsSetup) {
+function loginView(register = false) {
   const err = h('div', { class: 'err' });
-  const email = h('input', { type: 'email', required: true, autocomplete: 'username' }), pw = h('input', { type: 'password', required: true, minlength: needsSetup ? 10 : null, autocomplete: needsSetup ? 'new-password' : 'current-password' });
+  const f = {
+    church: h('input', { required: true }), conference: h('input', { placeholder: 'e.g. Texas Annual Conference' }),
+    email: h('input', { type: 'email', required: true, autocomplete: 'username' }),
+    pw: h('input', { type: 'password', required: true, minlength: register ? 10 : null, autocomplete: register ? 'new-password' : 'current-password' }),
+  };
+  const field = (label, el) => [h('label', {}, label), el];
   $app.replaceChildren(h('form', { class: 'card login', onsubmit: async e => {
     e.preventDefault();
-    try { await api('POST', needsSetup ? 'setup' : 'login', { email: email.value, password: pw.value }); shell(); } catch (ex) { err.textContent = ex.message; }
-  } }, h('h2', {}, needsSetup ? 'Create the pastor account' : 'Sign in'),
-  needsSetup ? h('p', { class: 'muted' }, 'First run: choose an email and a password of at least 10 characters.') : null,
-  h('label', {}, 'Email'), email, h('label', {}, 'Password'), pw, err, h('button', { class: 'btn', type: 'submit' }, needsSetup ? 'Create account' : 'Sign in')));
+    try {
+      await api('POST', register ? 'signup' : 'login', register
+        ? { church_name: f.church.value, conference: f.conference.value, email: f.email.value, password: f.pw.value }
+        : { email: f.email.value, password: f.pw.value });
+      shell();
+    } catch (ex) { err.textContent = ex.message; }
+  } }, h('h2', {}, register ? 'Register your church' : 'Sign in'),
+  register ? [h('p', { class: 'muted' }, 'You become the church’s admin and can add your team afterwards. Your church’s data is kept separate from every other church.'), field('Church name', f.church), field('Conference / district (optional)', f.conference)] : null,
+  field('Email', f.email), field(register ? 'Password (10+ characters)' : 'Password', f.pw), err,
+  h('div', { class: 'bar' }, h('button', { class: 'btn', type: 'submit' }, register ? 'Create church' : 'Sign in'),
+    h('button', { class: 'link', type: 'button', onclick: () => loginView(!register) }, register ? 'I already have an account' : 'Register a church'))));
 }
 
 async function boot() {
   const s = await api('GET', 'session');
-  s.authenticated ? shell() : loginView(s.needsSetup);
+  s.authenticated ? shell(s) : loginView(false);
 }
 boot();
