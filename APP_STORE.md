@@ -135,33 +135,59 @@ Don't add friends as *internal* testers: that makes them users on your App Store
 In App Store Connect, open the app, then version **1.0**:
 
 - **Screenshots**: drag in the files under **iPhone 6.9" Display**.
-- **Promotional text**: Leave a note for the next time you're somewhere, and get reminded the moment you walk back in.
-- **Description**:
+- **Promotional text** (up to 170 characters; can be changed any time without a new submission):
 
-  > Ever walk into a restaurant and think "what did I order last time, and was it any good?" Next Time remembers for you.
-  >
-  > Leave yourself a note for any place, like "Don't get the fish, the burger was great". The next time you arrive, your iPhone shows it to you.
-  >
-  > • Save the place you're at right now with one tap
-  > • Hands full? Just say "Hey Siri, add a Next Time note"
-  > • Search for any restaurant, shop or address
-  > • Share a place straight from Google Maps: tap Share, then Next Time
-  > • Rate places 1 to 5 stars and mark each dish 👍 or 👎
-  > • Snap the menu, your order, or the receipt
-  > • Sort by rating, or see your \"never again\" list at a glance
-  > • Get reminded every time you return, not just once
-  > • Works for anything: restaurants, hardware stores, hotels, trailheads, parking garages
-  >
-  > Private by design: your notes stay on your iPhone. No account, no ads, no tracking. iOS handles the arrival alerts itself, so Next Time only needs location access while you're using it and has almost no effect on battery.
+  ```
+  Never order the wrong thing twice. Leave stars, notes and photos for any place, and Next Time reminds you the moment you walk back in.
+  ```
 
-- **Keywords**: `restaurant,notes,reminder,rating,places,food,dishes,photos,siri,google maps,diary,dining`
+- **Description** (plain text, paste as is):
+
+  ```
+  Ever walk into a restaurant and think, "What did I order last time, and was it any good?" Next Time remembers for you.
+
+  Leave yourself a note for any place, like "Don't get the fish. The burger was great." The next time you walk in, your iPhone shows it to you, along with your rating and what to order.
+
+  REMEMBER WHAT MATTERS
+  • Rate places from 1 to 5 stars
+  • Mark each dish 👍 to get again or 👎 to skip
+  • Snap the menu, your plate, or the receipt, or add screenshots from your photo library
+  • Write anything else you want to know next time: the best table, the parking trick, who to ask for
+
+  GET REMINDED WHEN YOU'RE BACK
+  • Your note appears the moment you arrive, every time you return, not just once
+  • Works for restaurants, cafés, bars, shops, hotels, trailheads, anywhere
+  • Sort by rating, or check your "Loved" and "Never Again" lists before you head out
+
+  SAVE PLACES IN SECONDS
+  • Tap one of the places around you right now
+  • Search for any restaurant, shop or address
+  • Share straight from Google Maps: tap Share, then Next Time
+  • Or just ask Siri: "Add a Next Time note" or "Rate this place 4 stars in Next Time"
+
+  SHARE WITH FRIENDS
+  Send a friend your rating, notes and what to order with one tap. They can save it to their own Next Time, or view it in their browser if they don't have the app.
+
+  PRIVATE BY DESIGN
+  • No account, no ads, no tracking
+  • Your places stay on your iPhone and are backed up to your own iCloud, so they come back on a new phone and sync to your iPad
+  • iOS handles the arrival reminders itself, so Next Time only needs location access while you're using it and has almost no effect on battery
+  ```
+
+- **Keywords** (100 characters maximum; this is 94). Leave out other companies' names such as Google Maps:
+  Apple rejects trademarks in keywords, though mentioning a real integration in the description is fine.
+
+  ```
+  restaurant,notes,reminder,rating,food,dishes,photos,places,siri,share,backup,dining,menu,diary
+  ```
+
 - **Support URL**: `https://bmjaanes.github.io/chatbot/support.html`
 - **Marketing URL**: leave blank
 - **Version / Copyright**: `1.0` / `2026` followed by your name or company
 - **Build**: choose the build you uploaded.
 - **App Review Information**: no sign-in required. In **Notes**, paste:
 
-  > Next Time shows a note when the user arrives at a saved place. To test: tap +, choose Near Me, pick any place, write a note and save. Allow location and notifications. The notification is delivered by iOS (UNLocationNotificationTrigger) when the device enters the area around the place, so it appears after leaving and returning, or by simulating a location change. Places can also be added via Search or by pasting a Google Maps share link. Siri: say "Add a Next Time note" (location access must be granted in the app first). Ratings, dishes and photos are on the place screen. To add from Google Maps: open a place in Google Maps, tap Share, choose Next Time.
+  > Next Time shows a note when the user arrives at a saved place. To test: tap +, choose Near Me, pick any place, write a note and save. Allow location and notifications. The notification is delivered by iOS (UNLocationNotificationTrigger) when the device enters the area around the place, so it appears after leaving and returning, or by simulating a location change. Places can also be added via Search or by pasting a Google Maps share link. Siri: say "Add a Next Time note" (location access must be granted in the app first). Ratings, dishes and photos are on the place screen. To add from Google Maps: open a place in Google Maps, tap Share, choose Next Time. Sharing with a friend: open a saved place and tap Share with a Friend; the link opens a web page (bmjaanes.github.io/chatbot/share.html) with a button that opens the place in the app. Places are backed up to the user's own iCloud Drive; there is no account or server.
 
 ### 6. Fill in the app-level pages (once)
 - **App Privacy**: Privacy Policy URL `https://bmjaanes.github.io/chatbot/privacy.html`. Under Data Collection, choose **No, we do not collect data from this app**.
