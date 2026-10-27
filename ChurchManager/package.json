@@ -1,0 +1,12 @@
+{
+  "name": "church-manager",
+  "version": "0.1.0",
+  "description": "Church management software for a local United Methodist congregation",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node --no-warnings server.js",
+    "test": "node --no-warnings --test test/api.test.js"
+  }
+}
