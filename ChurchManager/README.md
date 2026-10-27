@@ -10,6 +10,8 @@ npm test
 
 Any church can **Register a church** on the sign-in page and becomes that church's admin.
 
+Works on iPad/phone browsers (installable via Add to Home Screen). To put it online see [DEPLOY.md](DEPLOY.md).
+
 ## Multi-church design
 
 - **One SQLite file per church** (`data/churches/<id>.db`): congregations are physically isolated, and a church can be

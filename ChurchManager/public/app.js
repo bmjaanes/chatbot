@@ -10,8 +10,12 @@ function h(tag, attrs = {}, ...kids) {
     else if (v !== false && v != null) el.setAttribute(k, v);
   }
   for (const kid of kids.flat(Infinity)) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : document.createTextNode(kid));
+  if (tag === 'table') return h('div', { class: 'table-wrap' }, el); // lets wide tables scroll sideways on small screens
   return el;
 }
+
+// replaceChildren() would turn a null child into the text "null", so drop empty children first.
+const put = (el, ...kids) => el.replaceChildren(...kids.flat(Infinity).filter(k => k != null && k !== false));
 
 async function api(method, path, body) {
   const res = await fetch('/api/' + path, {
@@ -82,7 +86,7 @@ function crudView(resource, columns, fields, { lookups = {}, extraActions } = {}
 
   function render() {
     const shown = rows.filter(r => !filter || JSON.stringify(Object.values(r)).toLowerCase().includes(filter.toLowerCase()));
-    root.replaceChildren(
+    root.replaceChildren(...[
       h('div', { class: 'bar' },
         h('input', { class: 'grow', placeholder: 'Search…', value: filter, oninput: e => { filter = e.target.value; render(); const i = root.querySelector('input'); i.focus(); i.setSelectionRange(filter.length, filter.length); } }),
         extraActions?.(rows),
@@ -95,7 +99,7 @@ function crudView(resource, columns, fields, { lookups = {}, extraActions } = {}
               if (!confirm('Delete this record?')) return;
               try { await api('DELETE', `${resource}/${r.id}`); await load(); } catch (ex) { alert(ex.message); }
             } }, 'Delete')))))),
-      shown.length ? null : h('p', { class: 'muted' }, 'Nothing here yet.'));
+      shown.length ? null : h('p', { class: 'muted' }, 'Nothing here yet.')].filter(Boolean));
   }
   load();
   return root;
@@ -130,7 +134,7 @@ function groups() {
   const root = h('div');
   async function load() {
     const [gs, ms] = await Promise.all([api('GET', 'groups'), api('GET', 'members')]);
-    root.replaceChildren(
+    put(root, 
       h('p', { class: 'muted' }, 'Create lists such as “Evening Bible Study” or “Summer Camp parents”, then copy the emails or open them in your mail app.'),
       crudView('groups', [{ label: 'Name', key: 'name' }, { label: 'Description', key: 'description' }],
         [{ name: 'name', label: 'Name', required: true }, { name: 'description', label: 'Description' }]),
@@ -156,7 +160,7 @@ function groupEditor(g, allMembers) {
       } }, 'Save members'),
       h('button', { class: 'btn ghost', onclick: async () => {
         const r = await api('GET', `groups/${g.id}/emails`);
-        out.replaceChildren(`${r.count} email addresses: `, h('code', {}, r.emails.join(', ')), ' ', r.mailto ? h('a', { href: r.mailto }, 'Open in mail app') : '');
+        put(out, `${r.count} email addresses: `, h('code', {}, r.emails.join(', ')), ' ', r.mailto ? h('a', { href: r.mailto }, 'Open in mail app') : '');
       } }, 'Get emails')));
   });
   return box;
@@ -242,7 +246,7 @@ function financeReport() {
   const root = h('div'), out = h('div');
   const load = async y => {
     const r = await api('GET', `reports/finance?year=${y}`);
-    out.replaceChildren(
+    put(out, 
       h('div', { class: 'tiles' }, tile('Total giving', money(r.totalGiving)), tile('Total spending', money(r.totalSpending)), tile('Net', money(r.net))),
       h('table', {}, h('thead', {}, h('tr', {}, ['Type', 'Category', 'Budget', 'Actual', 'Remaining'].map((t, i) => h('th', { class: i > 1 ? 'num' : '' }, t)))),
         h('tbody', {}, r.budget.map(b => h('tr', {}, h('td', {}, b.kind), h('td', {}, b.category), h('td', { class: 'num' }, money(b.budget)), h('td', { class: 'num' }, money(b.actual)),
@@ -260,7 +264,7 @@ function statements() {
   sel.onchange = async () => {
     if (!sel.value) return out.replaceChildren();
     const s = await api('GET', `members/${sel.value}/statement?year=${year.value}`);
-    out.replaceChildren(h('div', { class: 'card' }, h('h3', {}, `${s.member} — ${s.year} giving statement`),
+    put(out, h('div', { class: 'card' }, h('h3', {}, `${s.member} — ${s.year} giving statement`),
       h('table', {}, h('tbody', {}, s.gifts.map(g => h('tr', {}, h('td', {}, g.date), h('td', {}, g.fund), h('td', { class: 'num' }, money(g.amount)))))),
       h('p', {}, h('b', {}, `Total: ${money(s.total)}`)), h('button', { class: 'btn ghost', onclick: () => window.print() }, 'Print')));
   };
@@ -303,7 +307,7 @@ function statsReport() {
     const r = await api('GET', `reports/stats?year=${y}`);
     const cols = [['Month', 'month'], ['Sundays', 'sundays'], ['Avg worship', 'avgWorship'], ['Avg online', 'avgOnline'], ['Avg children', 'avgChildren'], ['Avg Sun. school', 'avgSundaySchool'],
       ['Baptisms', 'baptisms'], ['Professions', 'professions'], ['Events', 'events']];
-    out.replaceChildren(
+    put(out, 
       h('div', { class: 'tiles' }, ...Object.entries(r.membership).map(([k, v]) => tile(`${k[0].toUpperCase()}${k.slice(1)} members`, v))),
       h('table', {}, h('thead', {}, h('tr', {}, cols.map(([l], i) => h('th', { class: i ? 'num' : '' }, l)))),
         h('tbody', {}, r.months.map(m => h('tr', {}, cols.map(([, k], i) => h('td', { class: i ? 'num' : '' }, m[k] ?? '—')))))),
@@ -335,7 +339,7 @@ function team() {
     const roleSelect = (cur, onchange) => h('select', { onchange }, Object.entries(ROLE_LABEL).map(([v, l]) => h('option', { value: v, selected: v === cur }, l)));
     const email = h('input', { type: 'email', required: true, placeholder: 'person@example.org' }), pw = h('input', { type: 'text', placeholder: 'Temporary password (new people only)', minlength: 10 });
     const role = roleSelect('secretary');
-    root.replaceChildren(h('h2', {}, 'Team'),
+    put(root, h('h2', {}, 'Team'),
       h('p', { class: 'muted' }, 'Everyone who can sign in to this church. Admin: everything. Pastor: everything except team and payroll. Treasurer: finance and payroll. Secretary: people and statistics. Worship leader: services and hymns.'),
       h('table', {}, h('thead', {}, h('tr', {}, ['Email', 'Role', ''].map(t => h('th', {}, t)))),
         h('tbody', {}, list.map(u => h('tr', {}, h('td', {}, u.email),

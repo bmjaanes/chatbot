@@ -6,7 +6,7 @@ import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { openControl, openDb, tenantStore } from './db.js';
 
 const PUBLIC = join(fileURLToPath(new URL('.', import.meta.url)), 'public');
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml' };
 
 // Simple CRUD resources. `money` fields are dollars in the API, cents in the DB.
 const RESOURCES = {
@@ -323,12 +323,15 @@ export function createApp({ control, tenant }) {
       res.end(data);
     };
     try {
+      if (url.pathname === '/healthz') return send(200, 'text/plain', 'ok');
       if (url.pathname.startsWith('/api/')) {
         const body = ['POST', 'PUT'].includes(req.method) ? await readBody(req) : {};
         if (req.method !== 'GET' && req.headers['x-requested-with'] !== 'church-manager') throw new HttpError(403, 'Missing CSRF header');
         const out = await route(req, url, body);
         const headers = {};
-        if (out.cookie !== undefined) headers['Set-Cookie'] = `sid=${out.cookie}; HttpOnly; SameSite=Strict; Path=/${out.cookie ? '' : '; Max-Age=0'}`;
+        // Secure flag whenever the request arrived over HTTPS (directly or via the host's proxy).
+        const secure = req.headers['x-forwarded-proto'] === 'https' || process.env.COOKIE_SECURE === '1' ? '; Secure' : '';
+        if (out.cookie !== undefined) headers['Set-Cookie'] = `sid=${out.cookie}; HttpOnly; SameSite=Strict; Path=/${secure}${out.cookie ? '' : '; Max-Age=0'}`;
         if (out.csv) return send(200, 'text/csv', out.csv, { ...headers, 'Content-Disposition': `attachment; filename="${out.name}"` });
         return send(200, 'application/json', JSON.stringify(out.json), headers);
       }
@@ -346,6 +349,6 @@ export function createApp({ control, tenant }) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const port = Number(process.env.PORT ?? 3000);
-  http.createServer(createApp({ control: openControl(process.env.CONTROL_DB ?? 'data/control.db'), tenant: tenantStore(process.env.TENANT_DIR ?? 'data/churches') })).listen(port, () => console.log(`Church Manager on http://localhost:${port}`));
+  const port = Number(process.env.PORT ?? 3000), dataDir = process.env.DATA_DIR ?? 'data';
+  http.createServer(createApp({ control: openControl(process.env.CONTROL_DB ?? `${dataDir}/control.db`), tenant: tenantStore(process.env.TENANT_DIR ?? `${dataDir}/churches`) })).listen(port, () => console.log(`Church Manager on http://localhost:${port}`));
 }
