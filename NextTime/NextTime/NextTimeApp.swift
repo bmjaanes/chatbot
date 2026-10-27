@@ -7,23 +7,30 @@ struct NextTimeApp: App {
     // Shared with the Siri intent, so a note added by voice shows up immediately.
     @State private var store = ReminderStore.shared
     @State private var location = LocationService()
+    @State private var cloud = CloudSync(store: ReminderStore.shared)
 
     var body: some Scene {
         WindowGroup {
             RemindersListView()
                 .environment(store)
                 .environment(location)
+                .environment(cloud)
                 .environment(NotificationRouter.shared)
+                // A place a friend shared: share.html links here with nexttime://import#p=…
+                .onOpenURL { url in
+                    NotificationRouter.shared.importedPlace = SharedPlace(url: url)
+                }
         }
     }
 }
 
-/// Lets a tapped notification open the matching reminder.
+/// Opens the right screen when the app is launched from a notification or a shared link.
 @MainActor
 @Observable
 final class NotificationRouter {
     static let shared = NotificationRouter()
     var openedReminderID: UUID?
+    var importedPlace: SharedPlace?
 }
 
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {

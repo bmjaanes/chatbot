@@ -5,6 +5,7 @@ struct RemindersListView: View {
     @Environment(ReminderStore.self) private var store
     @Environment(LocationService.self) private var location
     @Environment(NotificationRouter.self) private var router
+    @Environment(CloudSync.self) private var cloud
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var path: [UUID] = []
@@ -12,6 +13,7 @@ struct RemindersListView: View {
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     @State private var sort: SortOrder = .newest
     @State private var filter: RatingFilter = .all
+    @State private var importing: ImportedPlace?
 
     enum SortOrder: String, CaseIterable, Identifiable {
         case newest = "Newest", rating = "Highest Rated", name = "Name"
@@ -53,8 +55,21 @@ struct RemindersListView: View {
                     NavigationLink(value: reminder.id) {
                         ReminderRow(reminder: reminder)
                     }
+                    .contextMenu {
+                        let shared = SharedPlace(reminder)
+                        ShareLink(item: shared.link, subject: Text(reminder.placeName), message: Text(shared.summary)) {
+                            Label("Share with a Friend", systemImage: "square.and.arrow.up")
+                        }
+                    }
                 }
                 .onDelete { offsets in store.delete(ids: offsets.map { visible[$0].id }) }
+
+                if !store.reminders.isEmpty {
+                    Section {
+                    } footer: {
+                        CloudStatusView()
+                    }
+                }
             }
             .overlay {
                 if store.reminders.isEmpty {
@@ -102,6 +117,26 @@ struct RemindersListView: View {
             .sheet(isPresented: $isAdding) {
                 AddReminderView()
             }
+            .sheet(item: $importing) { imported in
+                NavigationStack {
+                    ReminderEditorView(
+                        reminder: imported.place.reminder(),
+                        isNew: true,
+                        notice: "A friend shared this place. Change anything you like, then save it to your places.",
+                        onDone: { importing = nil })
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") { importing = nil }
+                        }
+                    }
+                }
+            }
+        }
+        .onChange(of: router.importedPlace, initial: true) { _, place in
+            guard let place else { return }
+            isAdding = false
+            importing = ImportedPlace(place: place)
+            router.importedPlace = nil
         }
         .onChange(of: router.openedReminderID, initial: true) { _, id in
             guard let id else { return }
@@ -124,6 +159,7 @@ struct RemindersListView: View {
             if scenePhase == .active {
                 // Places shared from Google Maps are written by the Share extension while the app is in the background.
                 store.reloadFromDisk()
+                cloud.start()
                 notificationStatus = await NotificationScheduler.authorizationStatus()
             }
         }
@@ -225,6 +261,54 @@ private struct PermissionBanner: View {
         case (true, true): "Allow location (While Using) and notifications so Next Time can remind you."
         case (true, false): "Allow location access (While Using is enough) so Next Time knows when you arrive."
         default: "Allow notifications so Next Time can remind you when you arrive."
+        }
+    }
+}
+
+private struct ImportedPlace: Identifiable {
+    let id = UUID()
+    let place: SharedPlace
+}
+
+/// "Backed up to iCloud · 2 min ago". Tap to sync now.
+private struct CloudStatusView: View {
+    @Environment(CloudSync.self) private var cloud
+
+    var body: some View {
+        Button {
+            cloud.requestSync()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                Text(message)
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Double-tap to back up now")
+    }
+
+    private var icon: String {
+        switch cloud.status {
+        case .starting, .syncing: "arrow.triangle.2.circlepath.icloud"
+        case .synced: "checkmark.icloud"
+        case .unavailable: "icloud.slash"
+        case .failed: "exclamationmark.icloud"
+        }
+    }
+
+    private var message: String {
+        switch cloud.status {
+        case .starting: "Checking iCloud…"
+        case .syncing: "Backing up to iCloud…"
+        case .synced(let date):
+            date.timeIntervalSinceNow > -60
+                ? "Backed up to iCloud just now"
+                : "Backed up to iCloud " + date.formatted(.relative(presentation: .named))
+        case .unavailable: "Not backed up. Sign in to iCloud and turn on iCloud Drive in Settings."
+        case .failed(let reason): reason
         }
     }
 }

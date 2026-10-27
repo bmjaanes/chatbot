@@ -15,6 +15,8 @@ struct PlaceReminder: Identifiable, Codable, Hashable {
     /// The Google Maps link the place was imported from, if any.
     var sourceURL: URL?
     var createdAt = Date()
+    /// When this place was last edited on any device; the newer edit wins when iCloud syncs two devices.
+    var updatedAt = Date()
     /// 1 to 5 stars, or nil when not rated yet.
     var rating: Int?
     /// What you had, and whether to get it again.
@@ -27,7 +29,7 @@ struct PlaceReminder: Identifiable, Codable, Hashable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, placeName, address, latitude, longitude, radius, note, isEnabled, sourceURL, createdAt
+        case id, placeName, address, latitude, longitude, radius, note, isEnabled, sourceURL, createdAt, updatedAt
         case rating, dishes, photos
     }
 
@@ -93,6 +95,7 @@ extension PlaceReminder {
         isEnabled = try c.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
         sourceURL = try c.decodeIfPresent(URL.self, forKey: .sourceURL)
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? createdAt
         rating = try c.decodeIfPresent(Int.self, forKey: .rating)
         dishes = try c.decodeIfPresent([DishNote].self, forKey: .dishes) ?? []
         photos = try c.decodeIfPresent([String].self, forKey: .photos) ?? []

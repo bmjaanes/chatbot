@@ -22,19 +22,27 @@ struct ReminderEditorView: View {
     @State private var didSave = false
     @FocusState private var noteFocused: Bool
     private let isNew: Bool
+    private let notice: String?
     private let onDone: (() -> Void)?
 
     private static let radiusOptions: [Double] = [100, 150, 250, 500]
     private static let photoColumns = [GridItem(.adaptive(minimum: 96), spacing: 6)]
 
-    init(reminder: PlaceReminder, isNew: Bool, onDone: (() -> Void)? = nil) {
+    init(reminder: PlaceReminder, isNew: Bool, notice: String? = nil, onDone: (() -> Void)? = nil) {
         _draft = State(initialValue: reminder)
         self.isNew = isNew
+        self.notice = notice
         self.onDone = onDone
     }
 
     var body: some View {
         Form {
+            if let notice {
+                Section {
+                    Label(notice, systemImage: "person.2.fill")
+                        .font(.subheadline)
+                }
+            }
             Section {
                 Map(initialPosition: .region(MKCoordinateRegion(
                     center: draft.coordinate, latitudinalMeters: 800, longitudinalMeters: 800))) {
@@ -81,6 +89,14 @@ struct ReminderEditorView: View {
             }
 
             if !isNew {
+                Section {
+                    let shared = SharedPlace(draft)
+                    ShareLink(item: shared.link, subject: Text(draft.placeName), message: Text(shared.summary)) {
+                        Label("Share with a Friend", systemImage: "square.and.arrow.up")
+                    }
+                } footer: {
+                    Text("Sends your rating, note and dishes as a link. Photos stay on your phone.")
+                }
                 Section {
                     Toggle("Reminder on", isOn: $draft.isEnabled)
                     Button {

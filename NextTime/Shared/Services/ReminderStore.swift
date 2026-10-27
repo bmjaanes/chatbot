@@ -50,8 +50,13 @@ final class ReminderStore {
         reminders.first { $0.id == id }
     }
 
+    /// Called after every local edit, so iCloud sync can upload it.
+    var onLocalChange: (() -> Void)?
+
     /// Adds a new reminder or replaces an existing one with the same id.
     func save(_ reminder: PlaceReminder) {
+        var reminder = reminder
+        reminder.updatedAt = Date()
         if let index = reminders.firstIndex(where: { $0.id == reminder.id }) {
             reminders[index] = reminder
         } else {
@@ -63,6 +68,7 @@ final class ReminderStore {
     func setEnabled(_ isEnabled: Bool, for id: UUID) {
         guard let index = reminders.firstIndex(where: { $0.id == id }) else { return }
         reminders[index].isEnabled = isEnabled
+        reminders[index].updatedAt = Date()
         changed()
     }
 
@@ -81,10 +87,30 @@ final class ReminderStore {
 
     // MARK: - Persistence
 
+    /// Applies places changed or deleted on another device. Unlike `save`, it keeps their timestamps.
+    func applyRemote(upserts: [PlaceReminder], deletions: Set<UUID>) {
+        guard !upserts.isEmpty || !deletions.isEmpty else { return }
+        PhotoStore.delete(reminders.filter { deletions.contains($0.id) }.flatMap(\.photos))
+        reminders.removeAll { deletions.contains($0.id) }
+        for reminder in upserts {
+            if let index = reminders.firstIndex(where: { $0.id == reminder.id }) {
+                let dropped = Set(reminders[index].photos).subtracting(reminder.photos)
+                PhotoStore.delete(Array(dropped))
+                reminders[index] = reminder
+            } else {
+                reminders.insert(reminder, at: 0)
+            }
+        }
+        guard !ScreenshotMode.isOn else { return }
+        persist()
+        reschedule()
+    }
+
     private func changed() {
         guard !ScreenshotMode.isOn else { return }
         persist()
         reschedule()
+        onLocalChange?()
     }
 
     private func load() {
