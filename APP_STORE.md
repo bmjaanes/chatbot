@@ -78,18 +78,55 @@ On a phone, open the `.p8` file in the Files app, select all, copy, and paste it
 2. Tap **Run workflow**, choose branch `claude/next-time-ios-app`, then **Run workflow**.
 3. It takes about 10 minutes. The build then shows up in App Store Connect under **TestFlight** after Apple
    processes it (another 5 to 30 minutes).
+4. Apple emails processing results to whoever uploaded the build, which here is the API key, so you won't get that email.
+   To check on a build, run https://github.com/bmjaanes/chatbot/actions/workflows/testflight-status.yml. It shows each
+   build's state straight from Apple, for example `IN_BETA_TESTING` when testers can install it.
 
 ### 2. Try it on your iPhone with TestFlight
 1. Install **TestFlight** from the App Store.
 2. In App Store Connect, open **TestFlight**, then **Internal Testing**, then **+**. Add yourself and select the build.
-3. Open the invite on your phone and install. This is the real app: arrival reminders work in the background.
+3. Find the invitation email (search Gmail for "TestFlight", including Promotions and Spam), open it **on the iPhone**,
+   and tap **View in TestFlight**, then **Accept** and **Install**. The app doesn't appear in TestFlight until you accept.
+   This is the real app: arrival reminders work in the background.
+4. If there's no invitation, resend it from **Internal Testing → your group → Testers → ••• → Resend Invitation**. Also check
+   that the phone's Apple ID (**Settings → [your name] → Media & Purchases**) is the one you added as a tester.
 
-### 3. Get screenshots
+### 3. Share with friends (external testing)
+Friends don't need developer accounts, just an iPhone and the free TestFlight app. Up to 10,000 people can test.
+Don't add friends as *internal* testers: that makes them users on your App Store Connect account.
+
+**Once:**
+1. In App Store Connect, open the app, then **TestFlight → Test Information** (left sidebar), and fill in:
+   - **Beta App Description**: Leave a note for the next time you're somewhere. Rate places, mark dishes 👍/👎, add
+     photos, and get reminded when you come back. Share places from Google Maps.
+   - **Feedback Email**: your email address
+   - **Privacy Policy URL**: `https://bmjaanes.github.io/chatbot/privacy.html`
+   - **Beta App Review Information**: your name, phone and email. Leave "Sign-in required" unchecked; the app has no login.
+2. Tap **+** next to **External Testing** and create a group, for example `Friends`.
+
+**For each build you want them to have:**
+1. In the group, open **Builds**, tap **+**, choose the build, and tap **Submit for Review**.
+   The first build goes through a short **Beta App Review**, usually a few hours to a day, much lighter than full App Store
+   review. The status goes from *Waiting for Review* to *Testing*. Later builds are often approved automatically.
+2. Invite people either way:
+   - **Public link (easiest)**: in the group, tap **Enable Public Link** and text the `testflight.apple.com/join/…` link.
+     You can cap how many people can join with it.
+   - **By email**: under **Testers**, tap **+**, then **Add New Testers**, and enter their email addresses.
+
+**What your friends do:** install **TestFlight**, tap your link (or **View in TestFlight** in the email), then
+**Accept** and **Install**.
+
+**Good to know**
+- Each person's places, notes and photos stay on their own phone. Nobody sees anyone else's.
+- Builds expire after **90 days**. Upload a new one before then and add it to the group; TestFlight tells testers it's there.
+- Testers can take a screenshot in the app to send feedback, which appears under **TestFlight → Feedback**.
+
+### 4. Get screenshots
 1. Run https://github.com/bmjaanes/chatbot/actions/workflows/screenshots.yml.
 2. When it finishes, download **app-store-screenshots** from the bottom of the run page.
 3. It contains the list, a reminder and the add screen, in light and dark mode. Pick 3 to 6 of them.
 
-### 4. Fill in the App Store listing
+### 5. Fill in the App Store listing
 In App Store Connect, open the app, then version **1.0**:
 
 - **Screenshots**: drag in the files under **iPhone 6.9" Display**.
@@ -121,13 +158,13 @@ In App Store Connect, open the app, then version **1.0**:
 
   > Next Time shows a note when the user arrives at a saved place. To test: tap +, choose Near Me, pick any place, write a note and save. Allow location and notifications. The notification is delivered by iOS (UNLocationNotificationTrigger) when the device enters the area around the place, so it appears after leaving and returning, or by simulating a location change. Places can also be added via Search or by pasting a Google Maps share link. Siri: say "Add a Next Time note" (location access must be granted in the app first). Ratings, dishes and photos are on the place screen. To add from Google Maps: open a place in Google Maps, tap Share, choose Next Time.
 
-### 5. Fill in the app-level pages (once)
+### 6. Fill in the app-level pages (once)
 - **App Privacy**: Privacy Policy URL `https://bmjaanes.github.io/chatbot/privacy.html`. Under Data Collection, choose **No, we do not collect data from this app**.
 - **Age Rating**: answer "None" to everything, which gives a rating of 4+.
 - **Pricing and Availability**: Free, all countries (or whichever you want).
 - **App Information**: Category **Lifestyle**, secondary **Food & Drink**.
 
-### 6. Submit
+### 7. Submit
 Tap **Add for Review**, then **Submit to App Review**. Reviews usually take one to two days.
 If Apple sends questions, they appear in App Store Connect under **App Review**.
 
