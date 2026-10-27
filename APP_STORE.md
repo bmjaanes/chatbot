@@ -26,8 +26,9 @@ You do need an Apple Developer account, and about an hour for the one-time setup
 https://developer.apple.com/programs/enroll/ costs $99 per year. Enroll as an individual unless you have a company.
 Approval usually takes a day or two.
 
-### 2. Register the App Group and the two app IDs
-The app and its Google Maps share extension each need an ID, and they share saved places through an App Group.
+### 2. Register the App Group, iCloud container and the two app IDs
+The app and its Google Maps share extension each need an ID. They share saved places through an App Group, and the app
+backs places up to the user's iCloud Drive through an iCloud container.
 All of this is at https://developer.apple.com/account/resources/identifiers/list.
 
 1. Tap **+**, choose **App Groups**, and enter the description `Next Time` and the identifier `group.com.bmjaanes.nexttime`. Tap **Register**.
@@ -35,6 +36,10 @@ All of this is at https://developer.apple.com/account/resources/identifiers/list
    Under Capabilities, tick **App Groups**. Tap **Continue**, then **Register**.
 3. Repeat step 2 for the extension: description `Next Time Share`, Bundle ID `com.bmjaanes.nexttime.share`, with **App Groups** ticked.
 4. Open each of the two app IDs, tap **Configure** next to App Groups, tick `group.com.bmjaanes.nexttime`, and save.
+5. For iCloud backup: tap **+**, choose **iCloud Containers**, and register the description `Next Time` with the identifier
+   `iCloud.com.bmjaanes.nexttime`. Then open the app ID `com.bmjaanes.nexttime` (not the share one), tick **iCloud**,
+   tap **Configure** (or **Edit**) next to it, tick `iCloud.com.bmjaanes.nexttime`, and save. If asked, choose
+   "Include CloudKit support" / Xcode 6 or later.
 
 (The upload workflow often registers these automatically, but doing it by hand avoids a failed first run.)
 

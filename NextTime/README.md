@@ -27,6 +27,21 @@ In Google Maps, open a place, tap **Share**, then **Next Time**. The Share exten
 link Google Maps shares, finds the place, and lets you add a rating and note without opening the app. The app and the
 extension share code (`Shared/`) and data (an App Group, `group.com.bmjaanes.nexttime`).
 
+### iCloud backup and sync
+
+Places, ratings, dishes and photos are copied to the user's own iCloud Drive (a private app container that doesn't show
+in the Files app) and synced across their devices (`NextTime/Sync/CloudSync.swift`). Each place is one JSON file and each
+photo one JPEG, so edits to different places never conflict; for the same place, the newer edit wins. The app always works
+from its local copy. A line at the bottom of the list shows when it last backed up; tap it to back up now. It needs the
+user signed in to iCloud with iCloud Drive on.
+
+### Share a place with a friend
+
+**Share with a Friend** (on a place, or long-press it in the list) sends a link to `docs/share.html` with the place's
+name, location, rating, note and dishes encoded after the `#` (`Shared/Models/SharedPlace.swift`; never photos). The page
+shows the place and offers **Save in the Next Time app** (`nexttime://import#p=…`, opening a prefilled new place) or
+**Save in the web app**. The web app reads and writes the same format.
+
 ### Siri
 
 Say **"Hey Siri, add a Next Time note"** (or "Remember this place in Next Time"), or **"Rate this place 4 stars in Next Time"**. Siri asks what to remember,
