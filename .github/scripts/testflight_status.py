@@ -38,6 +38,12 @@ EXTERNAL = {
 }
 
 
+def utc(iso):
+    """App Store Connect timestamps can carry any offset; show them in UTC."""
+    from datetime import datetime, timezone
+    return datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M")
+
+
 def ago(iso):
     """'3 h 20 min ago' for an App Store Connect timestamp."""
     from datetime import datetime, timezone
@@ -106,7 +112,7 @@ for b in builds["data"]:
     if external:
         line += f"\n    Friends (external testers): {EXTERNAL.get(external, external)}"
     if review.get("submittedDate"):
-        line += f"\n    Sent to Beta App Review {review['submittedDate'][:16].replace('T', ' ')} UTC ({ago(review['submittedDate'])})"
+        line += f"\n    Sent to Beta App Review {utc(review['submittedDate'])} UTC ({ago(review['submittedDate'])})"
     print(line)
     lines.append(line)
 
