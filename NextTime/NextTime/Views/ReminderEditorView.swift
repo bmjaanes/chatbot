@@ -25,7 +25,7 @@ struct ReminderEditorView: View {
     private let notice: String?
     private let onDone: (() -> Void)?
 
-    private static let radiusOptions: [Double] = [100, 150, 250, 500]
+    private static let radiusOptions: [Double] = [100, 150, 250, 500, 2_000, 15_000]
     private static let photoColumns = [GridItem(.adaptive(minimum: 96), spacing: 6)]
 
     init(reminder: PlaceReminder, isNew: Bool, notice: String? = nil, onDone: (() -> Void)? = nil) {
@@ -60,6 +60,14 @@ struct ReminderEditorView: View {
                 if let address = draft.address {
                     Text(address).foregroundStyle(.secondary)
                 }
+                Picker(selection: $draft.category) {
+                    Text("None").tag(PlaceCategory?.none)
+                    ForEach(PlaceCategory.allCases) { category in
+                        Label(category.title, systemImage: category.symbol).tag(PlaceCategory?.some(category))
+                    }
+                } label: {
+                    Label("Category", systemImage: draft.category?.symbol ?? "square.grid.2x2")
+                }
             }
 
             Section("Your rating") {
@@ -68,24 +76,27 @@ struct ReminderEditorView: View {
             }
 
             Section("Next time I'm here…") {
-                TextField("e.g. Ask for the patio. Cash only.", text: $draft.note, axis: .vertical)
+                TextField(draft.category?.examplePrompt ?? PlaceCategory.food.examplePrompt, text: $draft.note, axis: .vertical)
                     .lineLimit(3...8)
                     .focused($noteFocused)
             }
 
-            dishesSection
+            // Dishes only make sense for food (or places without a category); hidden elsewhere unless already filled in.
+            if draft.category == nil || draft.category == .food || !draft.dishes.isEmpty {
+                dishesSection
+            }
             photosSection
 
             Section {
                 Picker("Remind me within", selection: $draft.radius) {
-                    ForEach(Self.radiusOptions, id: \.self) { meters in
-                        Text(Measurement(value: meters, unit: UnitLength.meters)
-                            .formatted(.measurement(width: .abbreviated, usage: .road)))
-                            .tag(meters)
+                    ForEach(radiusChoices, id: \.self) { meters in
+                        Text(Self.radiusLabel(meters)).tag(meters)
                     }
                 }
             } footer: {
-                Text("You'll get a notification every time you arrive. A bigger area is more reliable; a smaller one avoids alerts when you're only passing by.")
+                Text(draft.isArea
+                     ? "You'll get a notification when you arrive in the area, every time you come back."
+                     : "You'll get a notification every time you arrive. A bigger area is more reliable; a smaller one avoids alerts when you're only passing by.")
             }
 
             if !isNew {
@@ -147,6 +158,23 @@ struct ReminderEditorView: View {
         .onDisappear {
             // Leaving without saving: drop photos that were only added in this session.
             if !didSave { PhotoStore.delete(Array(addedPhotos)) }
+        }
+    }
+
+    // MARK: - Reminder area
+
+    /// The standard choices, plus whatever an older or shared place already uses.
+    private var radiusChoices: [Double] {
+        Self.radiusOptions.contains(draft.radius) ? Self.radiusOptions : (Self.radiusOptions + [draft.radius]).sorted()
+    }
+
+    private static func radiusLabel(_ meters: Double) -> String {
+        let distance = Measurement(value: meters, unit: UnitLength.meters)
+            .formatted(.measurement(width: .abbreviated, usage: .road))
+        switch meters {
+        case 15_000...: return "Whole city (\(distance))"
+        case PlaceCategory.areaRadius...: return "Neighborhood (\(distance))"
+        default: return distance
         }
     }
 

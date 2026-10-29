@@ -23,6 +23,11 @@ struct PlaceReminder: Identifiable, Codable, Hashable {
     var dishes: [DishNote] = []
     /// File names of photos kept by `PhotoStore`.
     var photos: [String] = []
+    /// Optional kind of place, shown as its icon. Filled in automatically when the place type is known.
+    var category: PlaceCategory?
+
+    /// A city or neighborhood rather than one spot: "You're in Chicago" instead of "Back at…".
+    var isArea: Bool { radius >= PlaceCategory.areaRadius }
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
@@ -30,7 +35,7 @@ struct PlaceReminder: Identifiable, Codable, Hashable {
 
     enum CodingKeys: String, CodingKey {
         case id, placeName, address, latitude, longitude, radius, note, isEnabled, sourceURL, createdAt, updatedAt
-        case rating, dishes, photos
+        case rating, dishes, photos, category
     }
 
     /// One line for notifications and lists: "👍 Burger · 👎 Fish".
@@ -45,6 +50,8 @@ struct PlaceReminder: Identifiable, Codable, Hashable {
         latitude = place.latitude
         longitude = place.longitude
         sourceURL = place.sourceURL
+        category = place.category
+        if let radius = place.suggestedRadius { self.radius = radius }
     }
 
     /// Opens the place in the Google Maps app, falling back to the Google Maps website.
@@ -75,9 +82,57 @@ struct PlaceCandidate: Identifiable, Hashable {
     var latitude: Double
     var longitude: Double
     var sourceURL: URL?
+    var category: PlaceCategory?
+    /// Set for cities and neighborhoods, which need a much bigger reminder area than a shop.
+    var suggestedRadius: Double?
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+}
+
+/// What kind of place a note is for. Optional; only changes the icon, the filter and the example text.
+enum PlaceCategory: String, Codable, CaseIterable, Identifiable {
+    case food, shopping, todo, read, watch, other
+
+    var id: Self { self }
+
+    /// Reminder areas this big or bigger count as a whole city or neighborhood.
+    static let areaRadius: Double = 2_000
+
+    var title: String {
+        switch self {
+        case .food: "Food & Drink"
+        case .shopping: "Shopping"
+        case .todo: "Things to Do"
+        case .read: "Read"
+        case .watch: "Watch"
+        case .other: "Other"
+        }
+    }
+
+    /// SF Symbol for lists and menus.
+    var symbol: String {
+        switch self {
+        case .food: "fork.knife"
+        case .shopping: "bag"
+        case .todo: "ticket"
+        case .read: "book"
+        case .watch: "tv"
+        case .other: "mappin"
+        }
+    }
+
+    /// Example for the note field, so people see what each kind is good for.
+    var examplePrompt: String {
+        switch self {
+        case .food: "e.g. Don't get the fish. The burger was great."
+        case .shopping: "e.g. Ask for the 3/8\" brass fittings. Aisle 7."
+        case .todo: "e.g. Architecture boat tour. Deep dish at Lou Malnati's."
+        case .read: "e.g. Borrow Project Hail Mary."
+        case .watch: "e.g. Download the new season of Severance before the flight."
+        case .other: "e.g. Parking is cheaper on the second level."
+        }
     }
 }
 
@@ -99,6 +154,7 @@ extension PlaceReminder {
         rating = try c.decodeIfPresent(Int.self, forKey: .rating)
         dishes = try c.decodeIfPresent([DishNote].self, forKey: .dishes) ?? []
         photos = try c.decodeIfPresent([String].self, forKey: .photos) ?? []
+        category = try? c.decodeIfPresent(PlaceCategory.self, forKey: .category)
     }
 }
 

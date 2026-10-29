@@ -13,6 +13,7 @@ struct RemindersListView: View {
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     @State private var sort: SortOrder = .newest
     @State private var filter: RatingFilter = .all
+    @State private var categoryFilter: PlaceCategory?
     @State private var importing: ImportedPlace?
 
     enum SortOrder: String, CaseIterable, Identifiable {
@@ -34,7 +35,7 @@ struct RemindersListView: View {
     }
 
     private var visibleReminders: [PlaceReminder] {
-        let matching = store.reminders.filter(filter.includes)
+        let matching = store.reminders.filter { filter.includes($0) && (categoryFilter == nil || $0.category == categoryFilter) }
         switch sort {
         case .newest: return matching.sorted { $0.createdAt > $1.createdAt }
         case .rating: return matching.sorted { ($0.rating ?? 0, $0.createdAt) > ($1.rating ?? 0, $1.createdAt) }
@@ -78,9 +79,9 @@ struct RemindersListView: View {
                     ContentUnavailableView {
                         Label("No places here yet", systemImage: "star")
                     } description: {
-                        Text("Nothing you've saved matches \u{201C}\(filter.rawValue)\u{201D}.")
+                        Text("Nothing you've saved matches these filters.")
                     } actions: {
-                        Button("Show All Places") { filter = .all }
+                        Button("Show All Places") { filter = .all; categoryFilter = nil }
                     }
                 }
             }
@@ -94,8 +95,14 @@ struct RemindersListView: View {
                         Picker("Show", selection: $filter) {
                             ForEach(RatingFilter.allCases) { Text($0.rawValue).tag($0) }
                         }
+                        Picker("Category", selection: $categoryFilter) {
+                            Text("All Categories").tag(PlaceCategory?.none)
+                            ForEach(PlaceCategory.allCases) { category in
+                                Label(category.title, systemImage: category.symbol).tag(PlaceCategory?.some(category))
+                            }
+                        }
                     } label: {
-                        Label("Sort and Filter", systemImage: filter == .all
+                        Label("Sort and Filter", systemImage: filter == .all && categoryFilter == nil
                               ? "line.3.horizontal.decrease.circle"
                               : "line.3.horizontal.decrease.circle.fill")
                     }
@@ -181,10 +188,13 @@ private struct ReminderRow: View {
                     .frame(width: 44, height: 44)
                     .opacity(reminder.isEnabled ? 1 : 0.5)
             } else {
-                Image(systemName: "mappin.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(reminder.isEnabled ? Color.accentColor : .secondary)
+                Image(systemName: reminder.category?.symbol ?? (reminder.isArea ? "building.2" : "mappin"))
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 40, height: 40)
+                    .background(reminder.isEnabled ? Color.accentColor : .secondary, in: Circle())
                     .frame(width: 44)
+                    .accessibilityLabel(reminder.category?.title ?? "Place")
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(reminder.placeName)

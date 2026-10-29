@@ -19,6 +19,10 @@ struct SharedPlace: Codable, Equatable {
     var t: String?
     /// Dishes, "+Name" to get again or "-Name" to skip
     var d: [String]?
+    /// Category (PlaceCategory raw value)
+    var c: String?
+    /// Reminder radius in meters, sent only for cities and neighborhoods
+    var m: Double?
 
     static let webPage = URL(string: "https://bmjaanes.github.io/chatbot/share.html")!
 
@@ -30,6 +34,8 @@ struct SharedPlace: Codable, Equatable {
         r = reminder.rating
         t = reminder.note.isEmpty ? nil : reminder.note
         d = reminder.dishes.isEmpty ? nil : reminder.dishes.map { ($0.verdict == .good ? "+" : "-") + $0.name }
+        c = reminder.category?.rawValue
+        m = reminder.isArea ? reminder.radius : nil
     }
 
     /// The link to send: a web page that shows the place and offers to open it in the app.
@@ -51,6 +57,8 @@ struct SharedPlace: Codable, Equatable {
     func reminder() -> PlaceReminder {
         var reminder = PlaceReminder(place: PlaceCandidate(name: n, address: a, latitude: la, longitude: lo))
         reminder.rating = r
+        reminder.category = c.flatMap(PlaceCategory.init(rawValue:))
+        if let m, (100...50_000).contains(m) { reminder.radius = m }
         reminder.note = t ?? ""
         reminder.dishes = (d ?? []).compactMap { item in
             guard let first = item.first, first == "+" || first == "-", item.count > 1 else { return nil }

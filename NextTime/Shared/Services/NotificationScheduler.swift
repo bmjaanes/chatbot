@@ -47,7 +47,7 @@ enum NotificationScheduler {
 
         for reminder in wanted.values where !upToDate.contains(reminder.id.uuidString) {
             let content = UNMutableNotificationContent()
-            content.title = "Back at \(reminder.placeName)"
+            content.title = reminder.isArea ? "You're in \(reminder.placeName)" : "Back at \(reminder.placeName)"
             if let rating = reminder.rating { content.subtitle = StarRating.text(rating) }
             content.body = [reminder.note, reminder.dishSummary]
                 .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n")

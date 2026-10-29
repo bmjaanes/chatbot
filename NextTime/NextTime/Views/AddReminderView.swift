@@ -137,7 +137,7 @@ private struct SearchPlacesView: View {
             }
             .buttonStyle(.plain)
         }
-        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Restaurant, shop, address…")
+        .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Restaurant, shop, city or address…")
         .onChange(of: query) { _, newValue in
             completer.update(query: newValue, near: location.lastLocation)
         }

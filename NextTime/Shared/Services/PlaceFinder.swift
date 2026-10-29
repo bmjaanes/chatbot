@@ -69,12 +69,24 @@ enum PlaceFinder {
 extension PlaceCandidate {
     init(mapItem: MKMapItem, sourceURL: URL? = nil) {
         let placemark = mapItem.placemark
+        let area = PlaceCandidate.areaRadius(for: mapItem)
         self.init(
             name: mapItem.name ?? placemark.name ?? "Unnamed place",
-            address: PlaceCandidate.address(from: placemark),
+            address: area == nil ? PlaceCandidate.address(from: placemark) : placemark.administrativeArea,
             latitude: placemark.coordinate.latitude,
             longitude: placemark.coordinate.longitude,
-            sourceURL: sourceURL)
+            sourceURL: sourceURL,
+            category: area == nil ? PlaceCategory(mapItem.pointOfInterestCategory) : .todo,
+            suggestedRadius: area)
+    }
+
+    /// A whole city or neighborhood (no street, no business) gets a reminder area to match.
+    private static func areaRadius(for item: MKMapItem) -> Double? {
+        let p = item.placemark
+        guard item.pointOfInterestCategory == nil, p.thoroughfare == nil, p.subThoroughfare == nil else { return nil }
+        if p.locality != nil, p.subLocality == nil, item.name == p.locality { return 15_000 } // city
+        if p.subLocality != nil || p.locality != nil { return 2_000 } // neighborhood or district
+        return nil
     }
 
     static func address(from placemark: CLPlacemark) -> String? {
@@ -94,7 +106,7 @@ final class PlaceSearchCompleter: NSObject, MKLocalSearchCompleterDelegate {
     override init() {
         super.init()
         completer.delegate = self
-        completer.resultTypes = [.pointOfInterest, .address]
+        completer.resultTypes = [.pointOfInterest, .address] // .address includes cities
     }
 
     func update(query: String, near location: CLLocation?) {
@@ -115,5 +127,21 @@ final class PlaceSearchCompleter: NSObject, MKLocalSearchCompleterDelegate {
 
     nonisolated func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
         Task { @MainActor in self.results = [] }
+    }
+}
+
+extension PlaceCategory {
+    /// Picks a category from Apple Maps' place type, so most places never need one chosen by hand.
+    init?(_ poi: MKPointOfInterestCategory?) {
+        guard let poi else { return nil }
+        switch poi {
+        case .restaurant, .cafe, .bakery, .brewery, .winery, .nightlife, .foodMarket: self = .food
+        case .store, .pharmacy: self = .shopping
+        case .museum, .theater, .park, .beach, .nationalPark, .amusementPark, .zoo, .aquarium, .stadium,
+             .fitnessCenter, .marina: self = .todo
+        case .library: self = .read
+        case .movieTheater: self = .watch
+        default: return nil
+        }
     }
 }
