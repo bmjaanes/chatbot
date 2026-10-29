@@ -112,6 +112,7 @@ header p { margin: 6px 0 0; color: var(--muted); }
   border-right: 2px dashed var(--line);
 }
 .stub.here .pin { background: var(--marigold-soft); color: var(--marigold); }
+.stub .pin .cat-icon { font-size: 1.35rem; line-height: 1; }
 .stub .body { padding: 14px 16px 12px; display: grid; gap: 6px; min-width: 0; }
 .stub h2 { font-family: var(--display); font-weight: 600; font-size: 1.15rem; margin: 0; line-height: 1.2; overflow-wrap: anywhere; }
 .stub .addr { color: var(--muted); font-size: 0.85rem; overflow-wrap: anywhere; }
@@ -304,6 +305,15 @@ header p { margin: 6px 0 0; color: var(--muted); }
   </label>
 
   <div class="controls" id="controls" hidden>
+    <select id="category-filter" aria-label="Show category">
+      <option value="">All categories</option>
+      <option value="food">🍴 Food &amp; Drink</option>
+      <option value="shopping">🛍️ Shopping</option>
+      <option value="todo">🎟️ Things to Do</option>
+      <option value="read">📚 Read</option>
+      <option value="watch">📺 Watch</option>
+      <option value="other">📍 Other</option>
+    </select>
     <select id="sort" aria-label="Sort places">
       <option value="closest">Closest first</option>
       <option value="rating">Highest rated</option>
@@ -396,6 +406,19 @@ header p { margin: 6px 0 0; color: var(--muted); }
     </div>
 
     <div class="field">
+      <label for="f-category">Category <span class="hint">(optional)</span></label>
+      <select id="f-category">
+        <option value="">None</option>
+        <option value="food">🍴 Food &amp; Drink</option>
+        <option value="shopping">🛍️ Shopping</option>
+        <option value="todo">🎟️ Things to Do</option>
+        <option value="read">📚 Read</option>
+        <option value="watch">📺 Watch</option>
+        <option value="other">📍 Other</option>
+      </select>
+    </div>
+
+    <div class="field">
       <span class="label">Location</span>
       <div class="row">
         <button type="button" class="ghost" id="here-btn">Use where I am now</button>
@@ -414,7 +437,7 @@ header p { margin: 6px 0 0; color: var(--muted); }
       <textarea id="f-note" rows="3" placeholder="Ask for the patio. Cash only."></textarea>
     </div>
 
-    <div class="field">
+    <div class="field" id="dish-field">
       <span class="label">What I had</span>
       <div class="dish-rows" id="dish-rows"></div>
       <div class="dish-row">
@@ -445,6 +468,8 @@ header p { margin: 6px 0 0; color: var(--muted); }
         <option value="150" selected>150 m</option>
         <option value="250">250 m</option>
         <option value="500">500 m</option>
+        <option value="2000">2 km (neighborhood)</option>
+        <option value="15000">15 km (whole city)</option>
       </select>
     </div>
 
@@ -601,6 +626,18 @@ header p { margin: 6px 0 0; color: var(--muted); }
     return canvas.toDataURL("image/jpeg", 0.5);
   }
 
+  // Optional kind of place. Same values as PlaceCategory in the iPhone app.
+  const CATEGORIES = {
+    food: { icon: "🍴", title: "Food & Drink", example: "Don't get the fish. The burger was great." },
+    shopping: { icon: "🛍️", title: "Shopping", example: "Ask for the 3/8\" brass fittings. Aisle 7." },
+    todo: { icon: "🎟️", title: "Things to Do", example: "Architecture boat tour. Deep dish at Lou Malnati's." },
+    read: { icon: "📚", title: "Read", example: "Borrow Project Hail Mary." },
+    watch: { icon: "📺", title: "Watch", example: "Download the new season of Severance before the flight." },
+    other: { icon: "📍", title: "Other", example: "Parking is cheaper on the second level." },
+  };
+  const AREA_RADIUS = 2000; // this big or bigger is a neighborhood or city
+  const isArea = (p) => (p.radius || 150) >= AREA_RADIUS;
+
   const newId = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
   const starText = (r) => "★".repeat(r) + "☆".repeat(5 - r);
   const dishSummary = (p) => (p.dishes || []).map((d) => (d.verdict === "bad" ? "👎 " : "👍 ") + d.name).join(" · ");
@@ -617,6 +654,8 @@ header p { margin: 6px 0 0; color: var(--muted); }
     if (p.rating) o.r = p.rating;
     if (p.note) o.t = p.note;
     if (p.dishes && p.dishes.length) o.d = p.dishes.map((d) => (d.verdict === "bad" ? "-" : "+") + d.name);
+    if (p.category) o.c = p.category;
+    if (isArea(p)) o.m = p.radius;
     let bin = "";
     new TextEncoder().encode(JSON.stringify(o)).forEach((b) => { bin += String.fromCharCode(b); });
     return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -637,6 +676,8 @@ header p { margin: 6px 0 0; color: var(--muted); }
       dishes: Array.isArray(o.d)
         ? o.d.filter((d) => typeof d === "string" && d.length > 1).map((d) => ({ name: d.slice(1), verdict: d[0] === "-" ? "bad" : "good" }))
         : [],
+      category: CATEGORIES[o.c] ? o.c : null,
+      radius: o.m >= 100 && o.m <= 50000 ? o.m : null,
     };
   }
 
@@ -673,10 +714,13 @@ header p { margin: 6px 0 0; color: var(--muted); }
     $("f-address").value = data.address || "";
     $("f-note").value = data.note;
     if (data.coord) setCoord(data.coord, "shared");
+    if (data.category) $("f-category").value = data.category;
+    if (data.radius) $("f-radius").value = String(data.radius);
     draftRating = data.rating;
     draftDishes = data.dishes;
     renderStars();
     renderDishes();
+    applyCategory();
     $("parsed").hidden = false;
     $("parsed").classList.remove("warn");
     $("parsed").textContent = "A friend shared this. Change anything you like, then save.";
@@ -820,7 +864,7 @@ header p { margin: 6px 0 0; color: var(--muted); }
   let bannerTimer = null, bannerPlace = null;
   function showBanner(place, demo, title, body) {
     bannerPlace = place.id;
-    $("banner-title").textContent = (title || "Back at " + place.name) + (place.rating && !title ? "  " + starText(place.rating) : "");
+    $("banner-title").textContent = (title || (isArea(place) ? "You're in " : "Back at ") + place.name) + (place.rating && !title ? "  " + starText(place.rating) : "");
     $("banner-body").textContent = body || [place.note, dishSummary(place)].filter(Boolean).join(" · ");
     $("banner-demo").hidden = !demo;
     $("banner").classList.add("show");
@@ -836,7 +880,8 @@ header p { margin: 6px 0 0; color: var(--muted); }
   });
 
   // ---------- Rendering ----------
-  const view = { sort: "closest", filter: "all" };
+  const view = { sort: "closest", filter: "all", category: "" };
+  $("category-filter").onchange = () => { view.category = $("category-filter").value; render(); };
   $("sort").onchange = () => { view.sort = $("sort").value; render(); };
   document.querySelectorAll("[data-filter]").forEach((b) => {
     b.onclick = () => {
@@ -866,7 +911,16 @@ header p { margin: 6px 0 0; color: var(--muted); }
     const here = d != null && d <= (p.radius || 150);
     const card = el("article", "stub" + (here ? " here" : "") + (p.enabled === false ? " off" : ""));
     card.dataset.id = p.id;
-    const pin = el("div", "pin"); pin.innerHTML = PIN;
+    const pin = el("div", "pin");
+    const cat = CATEGORIES[p.category];
+    if (cat || isArea(p)) {
+      const icon = el("span", "cat-icon", cat ? cat.icon : "🏙️");
+      icon.setAttribute("role", "img");
+      icon.setAttribute("aria-label", cat ? cat.title : "City");
+      pin.append(icon);
+    } else {
+      pin.innerHTML = PIN;
+    }
     const body = el("div", "body");
     body.append(el("h2", null, p.name));
     if (p.rating) {
@@ -941,7 +995,7 @@ header p { margin: 6px 0 0; color: var(--muted); }
       const box = el("section", "empty");
       box.append(el("h2", null, "Save a note for the next time you're somewhere"));
       box.append(el("p", null, "At a restaurant and the fish was a letdown? Save it here. When you come back, you'll be reminded."));
-      box.append(stub({ id: "example", name: "Joe's Fish Shack", address: "12 Main St, Portland", rating: 2, note: "Ask for a booth by the window.",
+      box.append(stub({ id: "example", name: "Joe's Fish Shack", address: "12 Main St, Portland", rating: 2, category: "food", note: "Ask for a booth by the window.",
         dishes: [{ name: "Fish & chips", verdict: "bad" }, { name: "Smash burger", verdict: "good" }] }, { example: true }));
       const add = el("button", "primary", "Add your first place"); add.type = "button"; add.onclick = () => openSheet();
       box.append(add);
@@ -951,6 +1005,7 @@ header p { margin: 6px 0 0; color: var(--muted); }
       if (q) items = items.filter((p) => [p.name, p.address, p.note, dishSummary(p)].join(" ").toLowerCase().includes(q));
       if (view.filter === "loved") items = items.filter((p) => (p.rating || 0) >= 4);
       if (view.filter === "never") items = items.filter((p) => p.rating >= 1 && p.rating <= 2);
+      if (view.category) items = items.filter((p) => p.category === view.category);
       const newest = (a, b) => (b.createdAt || 0) - (a.createdAt || 0);
       const sorters = {
         closest: (a, b) => (a.dist ?? Infinity) - (b.dist ?? Infinity) || newest(a, b),
@@ -1017,6 +1072,14 @@ header p { margin: 6px 0 0; color: var(--muted); }
     $("f-dish").value = "";
     renderDishes();
   }
+  /** The note example and the dishes field follow the category; dishes only show for food unless already filled in. */
+  function applyCategory() {
+    const cat = CATEGORIES[$("f-category").value];
+    $("f-note").placeholder = (cat || CATEGORIES.food).example;
+    $("dish-field").hidden = !!cat && $("f-category").value !== "food" && draftDishes.length === 0;
+  }
+  $("f-category").addEventListener("change", applyCategory);
+
   $("add-good").onclick = () => addDish("good");
   $("add-bad").onclick = () => addDish("bad");
   $("f-dish").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addDish("good"); } });
@@ -1084,7 +1147,15 @@ header p { margin: 6px 0 0; color: var(--muted); }
     renderStars();
     renderDishes();
     renderPhotoEdit();
+    applyCategory();
     $("f-radius").value = String(place ? place.radius || 150 : 150);
+    if (!$("f-radius").value) { // an unusual size from an older or shared place
+      const o = el("option", null, Math.round(place.radius) + " m");
+      o.value = String(place.radius);
+      $("f-radius").append(o);
+      $("f-radius").value = o.value;
+    }
+    $("f-category").value = place && place.category && CATEGORIES[place.category] ? place.category : "";
     draftUrl = place ? place.url || null : null;
     setCoord(place && hasCoord(place) ? { lat: place.lat, lng: place.lng } : null, place && hasCoord(place) ? "saved" : "");
     $("here-btn").hidden = loc.status === "denied" || loc.status === "unavailable";
@@ -1167,6 +1238,7 @@ header p { margin: 6px 0 0; color: var(--muted); }
       photos: draftPhotos,
       address: $("f-address").value.trim() || null,
       radius: +$("f-radius").value,
+      category: $("f-category").value || null,
       enabled: editing ? editing.enabled !== false : true,
       url: draftUrl,
       createdAt: editing ? editing.createdAt || Date.now() : Date.now(),
