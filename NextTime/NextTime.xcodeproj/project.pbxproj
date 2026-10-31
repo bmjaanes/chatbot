@@ -18,6 +18,13 @@
 			remoteGlobalIDString = AA0000000000000000000015;
 			remoteInfo = NextTimeShare;
 		};
+		AA0000000000000000000025 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0000000000000000000009 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0000000000000000000006;
+			remoteInfo = NextTime;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -37,6 +44,7 @@
 /* Begin PBXFileReference section */
 		AA0000000000000000000001 /* NextTime.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NextTime.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000000010 /* NextTimeShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NextTimeShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA000000000000000000001E /* NextTimeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NextTimeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -53,6 +61,11 @@
 		AA0000000000000000000012 /* ShareExtension */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ShareExtension;
+			sourceTree = "<group>";
+		};
+		AA000000000000000000001F /* NextTimeTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = NextTimeTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -72,6 +85,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA0000000000000000000020 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -81,6 +101,7 @@
 				AA0000000000000000000002 /* NextTime */,
 				AA0000000000000000000011 /* Shared */,
 				AA0000000000000000000012 /* ShareExtension */,
+				AA000000000000000000001F /* NextTimeTests */,
 				AA0000000000000000000005 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -90,6 +111,7 @@
 			children = (
 				AA0000000000000000000001 /* NextTime.app */,
 				AA0000000000000000000010 /* NextTimeShare.appex */,
+				AA000000000000000000001E /* NextTimeTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -145,6 +167,29 @@
 			productReference = AA0000000000000000000010 /* NextTimeShare.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		AA0000000000000000000023 /* NextTimeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000000028 /* Build configuration list for PBXNativeTarget "NextTimeTests" */;
+			buildPhases = (
+				AA0000000000000000000021 /* Sources */,
+				AA0000000000000000000020 /* Frameworks */,
+				AA0000000000000000000022 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA0000000000000000000024 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AA000000000000000000001F /* NextTimeTests */,
+			);
+			name = NextTimeTests;
+			packageProductDependencies = (
+			);
+			productName = NextTimeTests;
+			productReference = AA000000000000000000001E /* NextTimeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -160,6 +205,10 @@
 					};
 					AA0000000000000000000015 = {
 						CreatedOnToolsVersion = 16.0;
+					};
+					AA0000000000000000000023 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = AA0000000000000000000006;
 					};
 				};
 			};
@@ -179,6 +228,7 @@
 			targets = (
 				AA0000000000000000000006 /* NextTime */,
 				AA0000000000000000000015 /* NextTimeShare */,
+				AA0000000000000000000023 /* NextTimeTests */,
 			);
 		};
 /* End PBXProject section */
@@ -192,6 +242,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		AA0000000000000000000018 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0000000000000000000022 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -215,6 +272,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA0000000000000000000021 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -222,6 +286,11 @@
 			isa = PBXTargetDependency;
 			target = AA0000000000000000000015 /* NextTimeShare */;
 			targetProxy = AA000000000000000000001B /* PBXContainerItemProxy */;
+		};
+		AA0000000000000000000024 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0000000000000000000006 /* NextTime */;
+			targetProxy = AA0000000000000000000025 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -403,6 +472,42 @@
 			};
 			name = Release;
 		};
+		AA0000000000000000000026 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bmjaanes.nexttime.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NextTime.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/NextTime";
+			};
+			name = Debug;
+		};
+		AA0000000000000000000027 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bmjaanes.nexttime.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NextTime.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/NextTime";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -429,6 +534,15 @@
 			buildConfigurations = (
 				AA000000000000000000001C /* Debug */,
 				AA000000000000000000001D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA0000000000000000000028 /* Build configuration list for PBXNativeTarget "NextTimeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000000000026 /* Debug */,
+				AA0000000000000000000027 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -1,0 +1,40 @@
+{
+  "_about": "Share links that the iPhone app (SharedPlace.swift) and the web app (docs/index.html, docs/share.html) must both read the same way. Used by NextTimeTests and tests/web.",
+  "cafe": {
+    "link": "https://bmjaanes.github.io/chatbot/share.html#p=eyJ2IjoxLCJuIjoiQ2Fmw6kgTHV4IPCfjbciLCJhIjoiMTIgUnVlIFN0ZS1DYXRoZXJpbmUsIE1vbnRyw6lhbCIsImxhIjo0NS41MDE2ODksImxvIjotNzMuNTY3MjU2LCJyIjo0LCJ0IjoiQXNrIGZvciDDiWxvZGllJ3MgdGFibGUuXG5DYXNoIG9ubHkuIiwiZCI6WyIrQ3JvcXVlLW1vbnNpZXVyIiwiLUNyw6htZSBicsO7bMOpZSJdLCJjIjoiZm9vZCJ9",
+    "expected": {
+      "name": "Café Lux 🍷",
+      "address": "12 Rue Ste-Catherine, Montréal",
+      "latitude": 45.501689,
+      "longitude": -73.567256,
+      "rating": 4,
+      "note": "Ask for Élodie's table.\nCash only.",
+      "dishes": [
+        {
+          "name": "Croque-monsieur",
+          "good": true
+        },
+        {
+          "name": "Crème brûlée",
+          "good": false
+        }
+      ],
+      "category": "food",
+      "radius": null
+    }
+  },
+  "city": {
+    "link": "https://bmjaanes.github.io/chatbot/share.html#p=eyJ2IjoxLCJuIjoiQ2hpY2FnbyIsImEiOiJJbGxpbm9pcyIsImxhIjo0MS44NzgxLCJsbyI6LTg3LjYyOTgsInQiOiJBcmNoaXRlY3R1cmUgYm9hdCB0b3VyLiIsImMiOiJ0b2RvIiwibSI6MTUwMDB9",
+    "expected": {
+      "name": "Chicago",
+      "address": "Illinois",
+      "latitude": 41.8781,
+      "longitude": -87.6298,
+      "rating": null,
+      "note": "Architecture boat tour.",
+      "dishes": [],
+      "category": "todo",
+      "radius": 15000
+    }
+  }
+}

@@ -1,7 +1,8 @@
-name: iOS build
+name: iOS build and tests
 
-# Compiles the app for the iOS Simulator on every change, so build errors
-# show up here instead of on someone's Mac. No Apple account needed.
+# Builds the app and runs the unit tests (NextTime/NextTimeTests) in the iPhone
+# simulator on every change, so mistakes show up here instead of on a phone.
+# No Apple account needed.
 on:
   push:
     paths:
@@ -13,9 +14,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  test:
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
 
@@ -23,14 +24,38 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Build for iOS Simulator
+      - name: Pick an iPhone simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          for runtime in sorted((k for k in devices if "iOS" in k), reverse=True):
+              for d in devices[runtime]:
+                  if d["name"].startswith("iPhone"):
+                      print(d["udid"]); sys.exit()
+          ')
+          if [ -z "$UDID" ]; then echo "::error::No iPhone simulator found"; xcrun simctl list devices available; exit 1; fi
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl list devices | grep "$UDID"
+
+      - name: Build and run unit tests
         run: |
           set -o pipefail
           xcodebuild \
             -project NextTime/NextTime.xcodeproj \
             -scheme NextTime \
             -configuration Debug \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination "id=$UDID" \
+            -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
-            build | tee build.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
-          grep -q "BUILD SUCCEEDED" build.log
+            test | tee test.log | grep -E "error:|Test Case .*(passed|failed)|Executed [0-9]+ test|TEST (SUCCEEDED|FAILED)|BUILD FAILED" || true
+          grep -q "TEST SUCCEEDED" test.log
+
+      - name: Keep the test results if anything failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-test-results
+          path: |
+            TestResults.xcresult
+            test.log

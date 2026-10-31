@@ -176,7 +176,9 @@ enum CloudReconciler {
         return String(name.dropFirst().dropLast(".icloud".count))
     }
 
-    static func run(local: [PlaceReminder], synced: Set<UUID>, folders: CloudFolders) -> Result {
+    /// `localPhotos` is where this device keeps photos; tests pass a temporary folder.
+    static func run(local: [PlaceReminder], synced: Set<UUID>, folders: CloudFolders,
+                    localPhotos: URL = PhotoStore.directory) -> Result {
         let fm = FileManager.default
         let decoder = JSONDecoder()
         let encoder = JSONEncoder()
@@ -259,9 +261,9 @@ enum CloudReconciler {
         for name in cloudPhotoListing {
             if let real = placeholderName(name) { cloudPhotosPending.insert(real) } else { cloudPhotos.insert(name) }
         }
-        try? fm.createDirectory(at: PhotoStore.directory, withIntermediateDirectories: true)
+        try? fm.createDirectory(at: localPhotos, withIntermediateDirectories: true)
         for name in wanted {
-            let here = PhotoStore.url(for: name)
+            let here = localPhotos.appending(path: name)
             let there = folders.photos.appending(path: name)
             let isHere = fm.fileExists(atPath: here.path)
             if isHere, !cloudPhotos.contains(name), !cloudPhotosPending.contains(name) {
