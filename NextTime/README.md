@@ -59,6 +59,23 @@ and the Action button. Location access has to be allowed in the app once first, 
 
 See [`APP_STORE.md`](../APP_STORE.md): builds, signing, screenshots and upload all run on GitHub Actions, so no Mac is required.
 
+## Tests
+
+GitHub runs both suites on every change (see the Actions tab):
+
+- **iPhone app**: `NextTime/NextTimeTests` (XCTest), run in the iPhone simulator by `.github/workflows/ios-build.yml`.
+  Covers the iCloud sync engine (backup, restore, deletes on either device, which edit wins, and the safeguards against
+  wiping data), the share-link format, the Google Maps link reader, data saved by older versions, and categories.
+  In Xcode: Product → Test (⌘U).
+- **Web app**: `tests/web` (Playwright), run by `.github/workflows/web-tests.yml` against `docs/`.
+  Covers adding places, Google Maps links, ratings, dishes, photos, sorting and filtering, near-me alerts, Siri shortcut
+  links, sharing between friends, and categories and cities. Locally: `cd tests/web && npm ci && npx playwright test`.
+- `NextTime/NextTimeTests/Fixtures/shared-places.json` holds share links that both suites check, so the app and the web
+  app keep reading each other's links.
+
+Not covered automatically: arrival notifications on a real device, Siri, the camera, the Share extension inside Google
+Maps, and sync between two real devices. Check those on a phone with TestFlight before each release.
+
 ## Running it
 
 Requirements: a Mac with **Xcode 16 or newer**, and an iPhone on **iOS 17 or newer**.
